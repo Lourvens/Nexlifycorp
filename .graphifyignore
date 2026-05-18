@@ -1,0 +1,18 @@
+# Git
+.git/
+
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Graphify output (avoid re-indexing the graph itself)
+graphify-out/
