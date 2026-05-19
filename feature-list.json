@@ -12,6 +12,42 @@
       "dependencies": ["edgartools"]
     },
     {
+      "id": "sec-filing-extractor-tests",
+      "name": "SEC Filing Extractor Tests",
+      "description": "42 unit tests covering extraction functions, metadata, sections, financials, and model serialization",
+      "status": "implemented",
+      "phase": 1,
+      "location": "tests/unit/test_sec_filing_extractor.py",
+      "dependencies": []
+    },
+    {
+      "id": "chunking-strategy",
+      "name": "Chunking Strategy Design",
+      "description": "Design document for two distinct chunking strategies: SEC (paragraph/sentence splitting) and Internal (H3 header-based)",
+      "status": "implemented",
+      "phase": 1,
+      "location": "docs/plans/2026-05-19-chunking-strategy.md",
+      "dependencies": []
+    },
+    {
+      "id": "sec-chunker",
+      "name": "SEC Paragraph Chunker",
+      "description": "Chunk SEC filings by paragraph (\n\n) then sentence boundary. Target ~1000 chars. 138 tests passing.",
+      "status": "implemented",
+      "phase": 2,
+      "location": "src/ingestion/chunk_strategies/sec_chunker.py",
+      "dependencies": []
+    },
+    {
+      "id": "internal-chunker",
+      "name": "Internal Doc H3 Chunker",
+      "description": "Chunk internal docs by H3 headers with H2 parent context. Skip empty sections and H2 containers.",
+      "status": "implemented",
+      "phase": 2,
+      "location": "src/ingestion/chunk_strategies/internal_chunker.py",
+      "dependencies": []
+    },
+    {
       "id": "internal-doc-extractor",
       "name": "Internal Document Extractor",
       "description": "Extract Nexlify Corp internal documents using Markdown header parsing. Extracts sections, metadata, topics, and classification flags.",
