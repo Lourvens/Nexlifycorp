@@ -52,9 +52,53 @@ class SEC10K(BaseModel):
     def model_dump(self, **kwargs):
         """Convert to dict for JSON serialization."""
         data = super().model_dump(**kwargs)
-        # Convert datetime objects to strings
         if data["metadata"]["filing_date"]:
             data["metadata"]["filing_date"] = data["metadata"]["filing_date"].isoformat()
         if data["metadata"]["document_date"]:
             data["metadata"]["document_date"] = data["metadata"]["document_date"].isoformat()
         return data
+
+
+# =============================================================================
+# INTERNAL DOCUMENT TYPES
+# =============================================================================
+
+
+class InternalSection(BaseModel):
+    """A section extracted from an internal document."""
+    # Content
+    title: str
+    content: str = ""
+    level: int = 2  # H2 or H3
+
+    # Document metadata (inherited)
+    company: str = "Nexlify Corp"
+    document_type: str
+    document_id: str | None = None
+    classification: str
+    date: datetime | None = None
+
+    # Section-specific metadata
+    section_path: str = ""
+    topics: list[str] = Field(default_factory=list)
+    contains_financials: bool = False
+    contains_projections: bool = False
+
+
+class InternalDocument(BaseModel):
+    """Complete internal document data."""
+    sections: list[InternalSection] = Field(default_factory=list)
+
+    @property
+    def metadata(self) -> dict:
+        """Get document-level metadata from first section."""
+        if self.sections:
+            s = self.sections[0]
+            return {
+                "company": s.company,
+                "document_type": s.document_type,
+                "document_id": s.document_id,
+                "classification": s.classification,
+                "date": s.date,
+            }
+        return {}

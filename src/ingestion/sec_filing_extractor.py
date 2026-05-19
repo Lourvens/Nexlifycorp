@@ -80,9 +80,8 @@ def extract_10k(
         # Extract financials from XBRL
         financials = _extract_financials(tenk_obj)
 
-        # Get full text and clean it
-        full_text = filing.text() or ""
-        full_text = clean_text(full_text)
+        # Get full text (disabled for now - only extract sections)
+        full_text = ""  # Full text extraction disabled for pipeline efficiency
 
         # Build SEC10K object
         sec10k = SEC10K(
@@ -171,9 +170,8 @@ def extract_10q(
         # Extract financials
         financials = _extract_financials(tenq_obj)
 
-        # Full text (with cleaning)
-        full_text = filing.text() or ""
-        full_text = clean_text(full_text)
+        # Full text (disabled for now)
+        full_text = ""  # Full text extraction disabled for pipeline efficiency
 
         sec10k = SEC10K(
             metadata=metadata,

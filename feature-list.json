@@ -1,0 +1,146 @@
+{
+  "version": "1.0.0",
+  "description": "Feature tracking for NexlifyCorp AI Financial Analyst",
+  "features": [
+    {
+      "id": "sec-filing-extractor",
+      "name": "SEC Filing Extractor",
+      "description": "Extract 10-K and 10-Q filings via edgartools with metadata, sections, and XBRL financials",
+      "status": "implemented",
+      "phase": 1,
+      "location": "src/ingestion/sec_filing_extractor.py",
+      "dependencies": ["edgartools"]
+    },
+    {
+      "id": "internal-doc-extractor",
+      "name": "Internal Document Extractor",
+      "description": "Extract Nexlify Corp internal documents using Markdown header parsing. Extracts sections, metadata, topics, and classification flags.",
+      "status": "planned",
+      "phase": 1,
+      "location": "src/ingestion/internal_doc_processor.py",
+      "dependencies": []
+    },
+    {
+      "id": "text-cleaner",
+      "name": "Text Cleaner",
+      "description": "Clean SEC filing text - remove box-drawing chars, page footers, normalize whitespace",
+      "status": "implemented",
+      "phase": 1,
+      "location": "src/utils/text_cleaner.py",
+      "dependencies": []
+    },
+    {
+      "id": "data-types",
+      "name": "Data Types",
+      "description": "Pydantic models for SEC10K, SECMetadata, SECSection, SECFinancials, DataSource",
+      "status": "implemented",
+      "phase": 1,
+      "location": "src/ingestion/types.py",
+      "dependencies": ["pydantic"]
+    },
+    {
+      "id": "hybrid-rag",
+      "name": "Basic Hybrid RAG",
+      "description": "Ingestion with metadata filtering and basic vector retrieval",
+      "status": "planned",
+      "phase": "1-3",
+      "location": "src/retrieval/",
+      "dependencies": ["langchain-chroma", "chromadb"]
+    },
+    {
+      "id": "production-rag",
+      "name": "Production RAG",
+      "description": "Hybrid search, reranking, and evaluation with Ragas",
+      "status": "planned",
+      "phase": "4-7",
+      "location": "src/retrieval/",
+      "dependencies": ["langchain", "ragas"]
+    },
+    {
+      "id": "knowledge-graph",
+      "name": "Knowledge Graphs",
+      "description": "Neo4j entity extraction, relationship mapping, multi-hop reasoning",
+      "status": "planned",
+      "phase": "8-12",
+      "location": "src/agents/",
+      "dependencies": ["neo4j"]
+    },
+    {
+      "id": "graphrag",
+      "name": "GraphRAG",
+      "description": "Graph-based retrieval augmented generation over financial data",
+      "status": "planned",
+      "phase": "8-12",
+      "location": "src/retrieval/",
+      "dependencies": ["langchain", "neo4j"]
+    },
+    {
+      "id": "agentic-rag",
+      "name": "Agentic RAG",
+      "description": "Multi-step research agents with LangGraph workflows",
+      "status": "planned",
+      "phase": "13-18",
+      "location": "src/agents/",
+      "dependencies": ["langgraph", "langchain-anthropic"]
+    },
+    {
+      "id": "financial-analysis-agent",
+      "name": "Financial Analysis Agent",
+      "description": "Agent specialized in financial document analysis and metrics extraction",
+      "status": "planned",
+      "phase": "13-18",
+      "location": "src/agents/",
+      "dependencies": ["langgraph", "langchain-anthropic"]
+    },
+    {
+      "id": "risk-assessment-agent",
+      "name": "Risk Assessment Agent",
+      "description": "Agent for risk factor identification and assessment from SEC filings",
+      "status": "planned",
+      "phase": "13-18",
+      "location": "src/agents/",
+      "dependencies": ["langgraph", "langchain-anthropic"]
+    },
+    {
+      "id": "earnings-comparison-agent",
+      "name": "Earnings Comparison Agent",
+      "description": "Agent for comparing earnings across quarters and years",
+      "status": "planned",
+      "phase": "13-18",
+      "location": "src/agents/",
+      "dependencies": ["langgraph", "langchain-anthropic"]
+    },
+    {
+      "id": "enterprise-governance",
+      "name": "Enterprise Governance",
+      "description": "Metadata governance, versioning, and RBAC simulation",
+      "status": "planned",
+      "phase": "19-25",
+      "location": null,
+      "dependencies": []
+    },
+    {
+      "id": "streamlit-ui",
+      "name": "Streamlit UI",
+      "description": "Web UI for querying and interacting with the knowledge base",
+      "status": "planned",
+      "phase": "3+",
+      "location": "streamlit_app/",
+      "dependencies": ["streamlit"]
+    },
+    {
+      "id": "databricks-integration",
+      "name": "Databricks Lakehouse Integration",
+      "description": "Unity Catalog + Mosaic AI Vector Search migration",
+      "status": "planned",
+      "phase": "19-25",
+      "location": null,
+      "dependencies": ["databricks"]
+    }
+  ],
+  "statuses": {
+    "implemented": "Feature is complete and working",
+    "in_progress": "Feature is currently being developed",
+    "planned": "Feature is planned but not started"
+  }
+}
