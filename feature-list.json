@@ -15,7 +15,7 @@
       "id": "internal-doc-extractor",
       "name": "Internal Document Extractor",
       "description": "Extract Nexlify Corp internal documents using Markdown header parsing. Extracts sections, metadata, topics, and classification flags.",
-      "status": "planned",
+      "status": "implemented",
       "phase": 1,
       "location": "src/ingestion/internal_doc_processor.py",
       "dependencies": []
