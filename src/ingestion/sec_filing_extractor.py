@@ -1,4 +1,5 @@
 """SEC Filing Extractor using edgartools."""
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -13,12 +14,16 @@ from src.ingestion.types import (
     DataSource,
 )
 from src.utils.logger import logger
+from src.utils.text_cleaner import clean_text, clean_section_header
+
+DEFAULT_OUTPUT_DIR = Path("data/extracted/sec")
 
 
 def extract_10k(
     ticker: str,
-    year: Optional[int] = None,
+    year: int | None = None,
     identity: str = "NexlifyKB/research@nexlify.com",
+    output_dir: Path | None = DEFAULT_OUTPUT_DIR,
 ) -> Optional[SEC10K]:
     """
     Extract a 10-K filing for a company.
@@ -27,6 +32,7 @@ def extract_10k(
         ticker: Stock ticker symbol (e.g., "AAPL", "NVDA")
         year: Specific year to extract (None for latest)
         identity: User identity for SEC EDGAR (required by SEC)
+        output_dir: Directory to save extracted JSON (None to skip saving)
 
     Returns:
         SEC10K object with extracted data, or None if failed
@@ -73,8 +79,9 @@ def extract_10k(
         # Extract financials
         financials = _extract_financials(tenk_obj)
 
-        # Get full text
+        # Get full text and clean it
         full_text = filing.text() or ""
+        full_text = clean_text(full_text)
 
         # Build SEC10K object
         sec10k = SEC10K(
@@ -89,6 +96,10 @@ def extract_10k(
             f"{len(full_text.split())} words"
         )
 
+        # Save to disk if output_dir provided
+        if output_dir:
+            _save_to_disk(sec10k, output_dir)
+
         return sec10k
 
     except Exception as e:
@@ -98,9 +109,10 @@ def extract_10k(
 
 def extract_10q(
     ticker: str,
-    year: Optional[int] = None,
-    quarter: Optional[int] = None,
+    year: int | None = None,
+    quarter: int | None = None,
     identity: str = "NexlifyKB/research@nexlify.com",
+    output_dir: Path | None = DEFAULT_OUTPUT_DIR,
 ) -> Optional[SEC10K]:
     """
     Extract a 10-Q filing for a company.
@@ -110,6 +122,7 @@ def extract_10q(
         year: Specific year (None for latest)
         quarter: Q1, Q2, Q3, or Q4 (None for latest)
         identity: User identity for SEC EDGAR
+        output_dir: Directory to save extracted JSON (None to skip saving)
 
     Returns:
         SEC10K object with extracted data, or None if failed
@@ -157,8 +170,9 @@ def extract_10q(
         # Extract financials
         financials = _extract_financials(tenq_obj)
 
-        # Full text
+        # Full text (with cleaning for 10-Q)
         full_text = filing.text() or ""
+        full_text = clean_text(full_text)
 
         sec10k = SEC10K(
             metadata=metadata,
@@ -168,6 +182,10 @@ def extract_10q(
         )
 
         logger.info(f"Extracted 10-Q for {ticker}: {len(sections)} sections")
+
+        # Save to disk if output_dir provided
+        if output_dir:
+            _save_to_disk(sec10k, output_dir)
 
         return sec10k
 
@@ -211,7 +229,9 @@ def _extract_sections(filing_obj) -> list[SECSection]:
         try:
             content = getattr(filing_obj, attr, None)
             if content and isinstance(content, str) and len(content) > 100:
-                # Truncate very long content
+                # Clean the content
+                content = clean_text(content)
+                # Truncate very long content (50K limit)
                 content = content[:50000] if len(content) > 50000 else content
                 sections.append(
                     SECSection(
@@ -252,6 +272,23 @@ def _extract_financials(filing_obj) -> Optional[SECFinancials]:
 def _get_quarter(date: datetime) -> int:
     """Get quarter from date."""
     return (date.month - 1) // 3 + 1
+
+
+def _save_to_disk(sec10k: SEC10K, output_dir: Path) -> Path:
+    """Save SEC10K to JSON file."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Filename: {ticker}_{form}_{year}.json
+    fiscal_year = sec10k.metadata.fiscal_year or "unknown"
+    filename = f"{sec10k.metadata.ticker}_{sec10k.metadata.form}_{fiscal_year}.json"
+    filepath = output_dir / filename
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(sec10k.model_dump(), f, indent=2, default=str)
+
+    logger.info(f"Saved: {filepath}")
+    return filepath
 
 
 if __name__ == "__main__":
