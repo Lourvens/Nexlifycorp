@@ -3,7 +3,6 @@ import re
 from typing import Set
 
 
-# Characters to remove entirely (visual/decorative)
 REMOVE_CHARS: Set[int] = {
     # Box-drawing characters (U+2500-U+257F)
     0x2500, 0x2501, 0x2502, 0x2503,  # ─│┌┐
@@ -52,6 +51,8 @@ def clean_text(text: str) -> str:
     - Trailing/leading whitespace from lines
     - Lines that are only box-drawing characters
     - Consecutive empty lines
+    - Page footers (e.g., "Apple Inc. | 2024 Form 10-K | 21")
+    - Section separators
 
     Args:
         text: Raw text to clean
@@ -71,25 +72,38 @@ def clean_text(text: str) -> str:
         for c in text
     )
 
-    # 3. Replace multiple spaces with single space
+    # 3. Remove page footers pattern: "Company | Form | Page"
+    # Pattern: "[Company Name] | [Year] Form [Type] | [Page Number]"
+    # Example: "Apple Inc. | 2024 Form 10-K | 5"
+    text = re.sub(
+        r'[A-Z][a-z]+(?:\.[a-z]+)?(?: Inc\.?| Corp\.?| Company)?\s*\|\s*\d{4}\s+Form\s+\d+-[A-Z]\s*\|\s*\d+',
+        '',
+        text,
+        flags=re.IGNORECASE
+    )
+
+    # 4. Remove standalone page numbers (lines with just numbers)
+    text = re.sub(r'^\s*\d+\s*$', '', text, flags=re.MULTILINE)
+
+    # 5. Replace multiple spaces with single space
     text = re.sub(r' {2,}', ' ', text)
 
-    # 4. Replace tabs with spaces
+    # 6. Replace tabs with spaces
     text = text.replace('\t', ' ')
 
-    # 5. Strip trailing/leading whitespace from each line
+    # 7. Strip trailing/leading whitespace from each line
     lines = [line.strip() for line in text.split('\n')]
 
-    # 6. Remove lines that are only box-drawing characters or spaces
+    # 8. Remove lines that are only box-drawing characters, spaces, or numbers
     lines = [
         line for line in lines
-        if line and not re.match(r'^[\s\u2500-\u257F\-=_]+$', line)
+        if line and not re.match(r'^[\s\u2500-\u257F\-=_0-9]+$', line)
     ]
 
-    # 7. Remove consecutive empty lines
+    # 9. Remove consecutive empty lines
     lines = [line for line in lines if line]
 
-    # 8. Join with single newlines
+    # 10. Join with single newlines
     text = '\n'.join(lines)
 
     return text.strip()

@@ -14,18 +14,10 @@ from src.ingestion.types import (
     DataSource,
 )
 from src.utils.logger import logger
+from src.utils.text_cleaner import clean_text
 
 
 DEFAULT_OUTPUT_DIR = Path("data/extracted/sec")
-
-
-def _clean_text(text: str) -> str:
-    """Clean extracted text."""
-    if not text:
-        return ""
-    # Remove excessive whitespace
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
-    return "\n".join(lines)
 
 
 def extract_10k(
@@ -90,7 +82,7 @@ def extract_10k(
 
         # Get full text and clean it
         full_text = filing.text() or ""
-        full_text = _clean_text(full_text)
+        full_text = clean_text(full_text)
 
         # Build SEC10K object
         sec10k = SEC10K(
@@ -181,7 +173,7 @@ def extract_10q(
 
         # Full text (with cleaning)
         full_text = filing.text() or ""
-        full_text = _clean_text(full_text)
+        full_text = clean_text(full_text)
 
         sec10k = SEC10K(
             metadata=metadata,
@@ -256,7 +248,7 @@ def _extract_sections(filing_obj) -> list[SECSection]:
             content = getattr(filing_obj, attr, None)
             if content and isinstance(content, str) and len(content) > 100:
                 # Clean the content
-                content = _clean_text(content)
+                content = clean_text(content)
                 sections.append(
                     SECSection(
                         name=name,
