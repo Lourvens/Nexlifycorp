@@ -81,7 +81,7 @@
       "status": "planned",
       "phase": "1-3",
       "location": "src/retrieval/",
-      "dependencies": ["langchain-chroma", "chromadb"]
+      "dependencies": ["langchain-qdrant", "qdrant-client", "fastembed"]
     },
     {
       "id": "production-rag",

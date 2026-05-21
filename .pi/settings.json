@@ -1,0 +1,5 @@
+{
+  "packages": [
+    "../../../../.bun/install/global/node_modules/@mjakl/pi-subagent"
+  ]
+}

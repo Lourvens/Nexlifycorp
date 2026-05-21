@@ -8,7 +8,7 @@
 
 NexlifyCorp is a hybrid Knowledge Base + Agentic AI system for financial intelligence workflows. It combines real public SEC EDGAR filings with fictional internal documents, progressing through a structured learning path toward production-grade enterprise architecture.
 
-**Tech Stack**: LangChain + LangGraph, Chroma, LangChain-Anthropic (Claude), Neo4j (planned), Streamlit
+**Tech Stack**: LangChain + LangGraph, Qdrant (hybrid search), LangChain-Anthropic (Claude), Neo4j (planned), Streamlit
 **Package Manager**: `uv` — run all Python commands via `uv run python`
 
 ---
@@ -81,7 +81,7 @@ planned → in_progress → implemented
 |------------------|----------------------------------------|
 | Framework        | LangChain + LangGraph                   |
 | LLM              | LangChain-Anthropic (Claude via `anthropic` package) |
-| Vector Store     | Chroma → Weaviate / Pinecone (planned)  |
+| Vector Store     | Qdrant (dense + sparse BM25) → Weaviate / Pinecone (planned)  |
 | Graph DB         | Neo4j (planned, Day 8+)                 |
 | Document Process | Unstructured, pypdf, edgartools         |
 | UI              | Streamlit                               |

@@ -6,13 +6,32 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "edgartools>=5.31.3",
+    "langchain-huggingface>=1.2.2",
+    "langchain-qdrant>=1.1.0",
     "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
     "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.3",
+    "qdrant-client>=1.18.0",
     "sec-edgar-downloader>=5.0.0",
+    # Sentence transformers (CPU only)
+    "sentence-transformers>=5.5.0",
 ]
 
 [dependency-groups]
 dev = [
+    "pydantic-settings>=2.14.1",
     "pytest>=9.0.3",
     "pytest-mock>=3.15.1",
+    "pyyaml>=6.0.3",
 ]
+
+# Use PyTorch CPU-only from their index
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cpu"
+default = false
+
+[tool.uv]
+# Allow all indexes for package resolution
+index-strategy = "unsafe-best-match"

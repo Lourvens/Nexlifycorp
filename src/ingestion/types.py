@@ -186,8 +186,8 @@ class Chunk(BaseModel):
     # For debugging/traceability
     source_filename: str | None = None
     
-    def to_chroma_metadata(self) -> dict:
-        """Convert to Chroma-compatible metadata dict."""
+    def to_qdrant_payload(self) -> dict:
+        """Convert to Qdrant-compatible payload dict."""
         m = self.metadata
         
         return {
