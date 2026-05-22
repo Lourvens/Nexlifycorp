@@ -33,7 +33,6 @@ from src.core import VectorStore
 from src.ingestion import create_ingestion_pipeline
 from src.utils.logger import logger
 
-
 # =============================================================================
 # SEC Commands
 # =============================================================================
@@ -61,7 +60,7 @@ def sec(ticker: str, year: int | None, form: str):
     pipeline = create_ingestion_pipeline()
     ticker = ticker.upper()
 
-    logger.info(f"Ingesting {ticker} {form} ({year or 'latest'})...")
+    logger.info(f"[cyan]Ingesting[/cyan] {ticker} [cyan]{form}[cyan] ([yellow]{year or 'latest'}[yellow])...")
 
     try:
         count = pipeline.ingest_sec_filing(
@@ -71,14 +70,13 @@ def sec(ticker: str, year: int | None, form: str):
         )
 
         if count > 0:
-            click.echo(f"✓ Ingested {count} chunks for {ticker} {form}")
+            logger.info(f"[green]✓[/green] Ingested [bold]{count}[/bold] chunks for [cyan]{ticker} {form}[cyan]")
         else:
-            click.echo(f"✗ No chunks generated for {ticker} {form}", err=True)
+            logger.warning(f"[yellow]✗[/yellow] No chunks generated for [cyan]{ticker} {form}[cyan]")
             raise SystemExit(1)
 
     except Exception as e:
-        logger.error(f"Failed to ingest {ticker}: {e}")
-        click.echo(f"✗ Error: {e}", err=True)
+        logger.error(f"[red]✗[/red] Failed to ingest [cyan]{ticker}[cyan]: {e}")
         raise SystemExit(1)
 
 
@@ -106,11 +104,11 @@ def internal(doc_id: str, doc_type: str, file: str | None, content: str | None):
     elif content:
         pass  # Use content as-is
     else:
-        click.echo("✗ Error: Must provide --file/-f or --content/-c", err=True)
+        logger.error("[red]✗[/red] Must provide [cyan]--file/-f[/cyan] or [cyan]--content/-c[/cyan]")
         raise SystemExit(1)
 
     pipeline = create_ingestion_pipeline()
-    logger.info(f"Ingesting internal doc {doc_id} ({doc_type})...")
+    logger.info(f"[cyan]Ingesting[/cyan] internal doc [yellow]{doc_id}[yellow] ([cyan]{doc_type}[cyan])...")
 
     try:
         count = pipeline.ingest_internal_doc(
@@ -120,14 +118,13 @@ def internal(doc_id: str, doc_type: str, file: str | None, content: str | None):
         )
 
         if count > 0:
-            click.echo(f"✓ Ingested {count} chunks for internal doc {doc_id}")
+            logger.info(f"[green]✓[/green] Ingested [bold]{count}[/bold] chunks for internal doc [yellow]{doc_id}[yellow]")
         else:
-            click.echo(f"✗ No chunks generated for internal doc {doc_id}", err=True)
+            logger.warning(f"[yellow]✗[/yellow] No chunks generated for internal doc [yellow]{doc_id}[yellow]")
             raise SystemExit(1)
 
     except Exception as e:
-        logger.error(f"Failed to ingest internal doc: {e}")
-        click.echo(f"✗ Error: {e}", err=True)
+        logger.error(f"[red]✗[/red] Failed to ingest internal doc: {e}")
         raise SystemExit(1)
 
 
@@ -146,9 +143,10 @@ def stats():
     """Show vector store stats."""
     vs = VectorStore()
 
-    click.echo(f"Collection: {vs.collection_name}")
-    click.echo(f"Documents:  {vs.count}")
-    click.echo(f"URL:        {vs.url}")
+    logger.info(f"[bold]Vector Store Stats[/bold]")
+    logger.info(f"  Collection: [cyan]{vs.collection_name}[cyan]")
+    logger.info(f"  Documents:  [bold]{vs.count}[/bold]")
+    logger.info(f"  URL:        [dim]{vs.url}[dim]")
 
     # Show breakdown by source
     try:
@@ -157,8 +155,8 @@ def stats():
         internal_count = len(all_docs) - public_count
 
         click.echo(f"\nBy access level:")
-        click.echo(f"  Public:    {public_count}")
-        click.echo(f"  Internal:  {internal_count}")
+        logger.info(f"  [green]Public[/green]:    [bold]{public_count}[/bold]")
+        logger.info(f"  [yellow]Internal[/yellow]:  [bold]{internal_count}[/bold]")
 
     except Exception as e:
         logger.debug(f"Could not get breakdown: {e}")
@@ -182,16 +180,16 @@ def list(limit: int):
     vs = VectorStore()
 
     if not vs.exists():
-        click.echo("Collection does not exist yet.")
+        logger.warning("[yellow]Collection does not exist yet.[/yellow]")
         return
 
     all_docs = vs.get_all(limit=limit)
 
     if not all_docs:
-        click.echo("No documents in vector store.")
+        logger.info("[cyan]No documents in vector store.[/cyan]")
         return
 
-    click.echo(f"Documents in vector store ({len(all_docs)} total):\n")
+    logger.info(f"[bold]Documents in vector store[/bold] ([bold]{len(all_docs)}[/bold] total):\n")
 
     # Group by source_detail
     by_source: dict[str, list] = {}
@@ -203,8 +201,9 @@ def list(limit: int):
 
     for source, docs in sorted(by_source.items()):
         is_public = docs[0].metadata.get("is_public", False)
-        access = "PUBLIC" if is_public else "INTERNAL"
-        click.echo(f"  [{access}] {source} ({len(docs)} chunks)")
+        access_color = "green" if is_public else "yellow"
+        access_label = "PUBLIC" if is_public else "INTERNAL"
+        logger.info(f"  [{access_color}]{access_label}[/{access_color}] {source} ([bold]{len(docs)}[/bold] chunks)")
 
 
 # =============================================================================
@@ -223,14 +222,14 @@ def clear(confirm: bool):
     """Clear all documents from the vector store."""
     if not confirm:
         vs = VectorStore()
-        click.echo("To clear, use: ingest.py clear --confirm")
-        click.echo(f"Current count: {vs.count} documents")
+        logger.warning("[yellow]To clear, use:[/yellow] [cyan]ingest.py clear --confirm[/cyan]")
+        logger.info(f"Current count: [bold]{vs.count}[/bold] documents")
         raise SystemExit(1)
 
     vs = VectorStore()
     count = vs.count
     vs.clear()
-    click.echo(f"✓ Cleared {count} documents from vector store")
+    logger.info(f"[green]✓[/green] Cleared [bold]{count}[/bold] documents from vector store")
 
 
 # =============================================================================

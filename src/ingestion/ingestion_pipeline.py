@@ -71,7 +71,7 @@ class IngestionPipeline:
             sec_doc = extract_10q(ticker, year)
 
         if not sec_doc:
-            logger.warning(f"No {form} found for {ticker}")
+            logger.warning(f"[yellow]No {form} found for {ticker}[yellow]")
             return []
 
         # Chunk the document
@@ -87,7 +87,7 @@ class IngestionPipeline:
             section_chunks = chunker.chunk_section(section)
             chunks.extend(section_chunks)
 
-        logger.info(f"Processed {ticker} {form}: {len(chunks)} chunks")
+        logger.info(f"[cyan]Processed {ticker} {form}[cyan]: [bold]{len(chunks)}[/bold] chunks")
         return chunks
 
     def ingest_sec_filing(
@@ -110,7 +110,7 @@ class IngestionPipeline:
         chunks = self.process_sec_filing(ticker, year, form)
         if chunks:
             self.vector_store.add_chunks(chunks)
-            logger.info(f"Ingested {len(chunks)} chunks for {ticker} {form}")
+            logger.info(f"[green]✓[/green] Ingested [bold]{len(chunks)}[/bold] chunks for [cyan]{ticker} {form}[cyan]")
         return len(chunks)
 
     # =========================================================================
@@ -138,7 +138,7 @@ class IngestionPipeline:
 
         internal_doc = extract_internal_document_from_content(content, doc_id, doc_type)
         if not internal_doc:
-            logger.warning(f"Failed to parse internal doc {doc_id}")
+            logger.warning(f"[yellow]Failed to parse internal doc {doc_id}[yellow]")
             return []
 
         # Get classification from first non-H1 section
@@ -155,7 +155,7 @@ class IngestionPipeline:
         )
 
         chunks = chunker.chunk_document(internal_doc)
-        logger.info(f"Processed internal doc {doc_id}: {len(chunks)} chunks")
+        logger.info(f"[cyan]Processed internal doc {doc_id}[cyan]: [bold]{len(chunks)}[/bold] chunks")
         return chunks
 
     def ingest_internal_doc(
@@ -178,7 +178,7 @@ class IngestionPipeline:
         chunks = self.process_internal_doc(doc_id, doc_type, content)
         if chunks:
             self.vector_store.add_chunks(chunks)
-            logger.info(f"Ingested {len(chunks)} chunks for internal doc {doc_id}")
+            logger.info(f"[green]✓[/green] Ingested [bold]{len(chunks)}[/bold] chunks for internal doc [yellow]{doc_id}[yellow]")
         return len(chunks)
 
     # =========================================================================
@@ -204,7 +204,7 @@ class IngestionPipeline:
                 count = self.ingest_sec_filing(ticker, year, form)
                 results[ticker] = count
             except Exception as e:
-                logger.error(f"Failed to ingest {ticker} {form}: {e}")
+                logger.error(f"[red]✗[/red] Failed to ingest {ticker} {form}: {e}")
                 results[ticker] = 0
         return results
 

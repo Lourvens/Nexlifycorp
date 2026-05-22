@@ -41,13 +41,13 @@ def extract_10k(
     set_identity(identity)
 
     try:
-        logger.info(f"Extracting 10-K for {ticker} (year: {year or 'latest'})")
+        logger.info(f"[cyan]Extracting 10-K for {ticker}[cyan] ([yellow]year: {year or 'latest'}[yellow])")
 
         company = Company(ticker)
         filings = company.get_filings(form="10-K")
 
         if not filings:
-            logger.warning(f"No 10-K filings found for {ticker}")
+            logger.warning(f"[yellow]No 10-K filings found for {ticker}[yellow]")
             return None
 
         # Get specific year or latest
@@ -61,12 +61,12 @@ def extract_10k(
                 None,
             )
             if not filing:
-                logger.warning(f"No 10-K found for {ticker} in {year}")
+                logger.warning(f"[yellow]No 10-K found for {ticker} in {year}[yellow]")
                 filing = filings.latest()
         else:
             filing = filings.latest()
 
-        logger.info(f"Found filing: {filing.accession_number}, date: {filing.filing_date}")
+        logger.info(f"[cyan]Found filing:[/cyan] [yellow]{filing.accession_number}[yellow] | date: [cyan]{filing.filing_date}[cyan]")
 
         # Get 10-K object with all parsed data
         tenk_obj = filing.obj()
@@ -92,8 +92,7 @@ def extract_10k(
         )
 
         logger.info(
-            f"Extracted 10-K for {ticker}: {len(sections)} sections, "
-            f"{len(full_text.split())} words"
+            f"[cyan]Extracted 10-K for {ticker}[cyan]: [bold]{len(sections)}[/bold] sections"
         )
 
         # Save to disk if output_dir provided
@@ -103,7 +102,7 @@ def extract_10k(
         return sec10k
 
     except Exception as e:
-        logger.error(f"Error extracting 10-K for {ticker}: {e}")
+        logger.error(f"[red]✗[/red] Error extracting 10-K for {ticker}: {e}")
         return None
 
 
@@ -131,15 +130,15 @@ def extract_10q(
 
     try:
         logger.info(
-            f"Extracting 10-Q for {ticker} "
-            f"(year: {year or 'latest'}, quarter: {quarter or 'latest'})"
+            f"[cyan]Extracting 10-Q for {ticker}[cyan] "
+            f"([yellow]year: {year or 'latest'}[yellow], [cyan]quarter: {quarter or 'latest'}[cyan])"
         )
 
         company = Company(ticker)
         filings = company.get_filings(form="10-Q")
 
         if not filings:
-            logger.warning(f"No 10-Q filings found for {ticker}")
+            logger.warning(f"[yellow]No 10-Q filings found for {ticker}[yellow]")
             return None
 
         filing = filings.latest()
@@ -180,7 +179,7 @@ def extract_10q(
             financials=financials,
         )
 
-        logger.info(f"Extracted 10-Q for {ticker}: {len(sections)} sections")
+        logger.info(f"[cyan]Extracted 10-Q for {ticker}[cyan]: [bold]{len(sections)}[/bold] sections")
 
         # Save to disk if output_dir provided
         if output_dir:
@@ -189,7 +188,7 @@ def extract_10q(
         return sec10k
 
     except Exception as e:
-        logger.error(f"Error extracting 10-Q for {ticker}: {e}")
+        logger.error(f"[red]✗[/red] Error extracting 10-Q for {ticker}: {e}")
         return None
 
 
@@ -362,7 +361,7 @@ def _save_to_disk(sec10k: SEC10K, output_dir: Path) -> Path:
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(sec10k.model_dump(), f, indent=2, default=str)
 
-    logger.info(f"Saved: {filepath}")
+    logger.info(f"[green]✓[/green] Saved: [dim]{filepath}[dim]")
     return filepath
 
 

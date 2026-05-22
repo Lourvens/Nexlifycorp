@@ -254,7 +254,7 @@ def extract_internal_document(
         return InternalDocument(sections=internal_sections)
 
     except Exception as e:
-        logger.error(f"Error extracting {filepath}: {e}")
+        logger.error(f"[red]✗[/red] Error extracting [cyan]{filepath}[cyan]: {e}")
         return None
 
 
@@ -329,7 +329,7 @@ def extract_internal_document_from_content(
         return InternalDocument(sections=internal_sections)
 
     except Exception as e:
-        logger.error(f"Error extracting internal doc from content: {e}")
+        logger.error(f"[red]✗[/red] Error extracting internal doc from content: {e}")
         return None
 
 
@@ -354,7 +354,7 @@ def extract_all_internal_documents(
         folder_path = base_path / folder_name
 
         if not folder_path.exists():
-            logger.warning(f"Folder not found: {folder_path}")
+            logger.warning(f"[yellow]Folder not found:[/yellow] [dim]{folder_path}[dim]")
             continue
 
         # Process all markdown files in folder
@@ -377,9 +377,9 @@ def extract_all_internal_documents(
                         default=str,
                     )
 
-                logger.info(f"Extracted: {md_file.name} ({len(doc.sections)} sections)")
+                logger.info(f"[green]✓[/green] Extracted [cyan]{md_file.name}[cyan] ([bold]{len(doc.sections)}[/bold] sections)")
 
-    logger.info(f"Total extracted: {len(documents)} documents")
+    logger.info(f"[bold]Total extracted:[/bold] [bold]{len(documents)}[/bold] documents")
     return documents
 
 
