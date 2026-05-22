@@ -29,16 +29,18 @@ class TestCLIStructure:
             timeout=30,
         )
         assert result.returncode == 0
-        assert "sec" in result.stdout
+        assert "public" in result.stdout
         assert "internal" in result.stdout
         assert "stats" in result.stdout
         assert "list" in result.stdout
         assert "clear" in result.stdout
+        assert "auto" in result.stdout
+        assert "manifest" in result.stdout
 
-    def test_sec_help_shows_ticker_argument(self):
-        """sec --help shows ticker as argument."""
+    def test_public_help_shows_ticker_argument(self):
+        """public --help shows ticker as argument."""
         result = subprocess.run(
-            [PYTHON, "scripts/ingest.py", "sec", "--help"],
+            [PYTHON, "scripts/ingest.py", "public", "--help"],
             capture_output=True,
             text=True,
             cwd=str(PROJECT_ROOT),
@@ -102,10 +104,10 @@ class TestCLIStructure:
 class TestCommandRouting:
     """Verify commands route to correct handlers."""
 
-    def test_sec_requires_ticker(self):
-        """sec without ticker shows error."""
+    def test_public_requires_ticker(self):
+        """public without ticker shows error."""
         result = subprocess.run(
-            [PYTHON, "scripts/ingest.py", "sec"],
+            [PYTHON, "scripts/ingest.py", "public"],
             capture_output=True,
             text=True,
             cwd=str(PROJECT_ROOT),
@@ -170,8 +172,8 @@ class TestCLIGroup:
         assert "NexlifyCorp" in result.stdout or "NexlifyCorp" in result.stderr
 
     def test_all_commands_exist(self):
-        """All 5 commands are accessible."""
-        commands = ["sec", "internal", "stats", "list", "clear"]
+        """All 10 commands are accessible."""
+        commands = ["public", "internal", "stats", "list", "clear", "auto", "auto-public", "auto-internal", "manifest", "reset"]
         for cmd in commands:
             result = subprocess.run(
                 [PYTHON, "scripts/ingest.py", cmd, "--help"],
@@ -203,10 +205,10 @@ class TestArgumentValidation:
         output = result.stdout + result.stderr
         assert "Must provide" in output
 
-    def test_sec_form_choice(self):
-        """sec --form only accepts 10-K or 10-Q."""
+    def test_public_form_choice(self):
+        """public --form only accepts 10-K or 10-Q."""
         result = subprocess.run(
-            [PYTHON, "scripts/ingest.py", "sec", "NVDA", "--form", "10-X"],
+            [PYTHON, "scripts/ingest.py", "public", "NVDA", "--form", "10-X"],
             capture_output=True,
             text=True,
             cwd=str(PROJECT_ROOT),

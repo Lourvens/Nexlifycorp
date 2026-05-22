@@ -19,10 +19,17 @@ from src.ingestion.sec_filing_extractor import extract_10k, extract_10q
 from src.ingestion.internal_doc_processor import extract_internal_document
 from src.ingestion.chunk_strategies.sec_chunker import SECChunker
 from src.ingestion.chunk_strategies.internal_chunker import InternalChunker
+from src.ingestion.manifest import get_manifest
 from src.utils.logger import logger
 
 # Forward reference to avoid circular import
 VectorStore = "VectorStore"
+
+
+def _get_doc_id(ticker: str, form: str, year: int | None) -> str:
+    """Generate document ID for SEC filings."""
+    year_str = str(year) if year else "latest"
+    return f"{ticker}_{form.replace('-', '')}_{year_str}"
 
 
 class IngestionPipeline:
@@ -107,9 +114,25 @@ class IngestionPipeline:
         Returns:
             Number of chunks stored
         """
+        # Check manifest
+        doc_id = _get_doc_id(ticker, form, year)
+        manifest = get_manifest()
+
+        if manifest.is_ingested(doc_id):
+            logger.info(f"[cyan]Skipping[/cyan] [cyan]{ticker} {form}[cyan] (already ingested)")
+            return 0
+
         chunks = self.process_sec_filing(ticker, year, form)
         if chunks:
             self.vector_store.add_chunks(chunks)
+            manifest.mark_ingested(
+                doc_id=doc_id,
+                doc_type="sec",
+                chunks=len(chunks),
+                ticker=ticker,
+                form=form,
+                year=year,
+            )
             logger.info(f"[green]✓[/green] Ingested [bold]{len(chunks)}[/bold] chunks for [cyan]{ticker} {form}[cyan]")
         return len(chunks)
 
@@ -175,9 +198,22 @@ class IngestionPipeline:
         Returns:
             Number of chunks stored
         """
+        # Check manifest
+        manifest = get_manifest()
+
+        if manifest.is_ingested(doc_id):
+            logger.info(f"[cyan]Skipping[/cyan] [yellow]{doc_id}[yellow] (already ingested)")
+            return 0
+
         chunks = self.process_internal_doc(doc_id, doc_type, content)
         if chunks:
             self.vector_store.add_chunks(chunks)
+            manifest.mark_ingested(
+                doc_id=doc_id,
+                doc_type="internal",
+                chunks=len(chunks),
+                internal_doc_type=doc_type,
+            )
             logger.info(f"[green]✓[/green] Ingested [bold]{len(chunks)}[/bold] chunks for internal doc [yellow]{doc_id}[yellow]")
         return len(chunks)
 

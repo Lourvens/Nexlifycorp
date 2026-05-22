@@ -24,8 +24,9 @@ class Settings(BaseSettings):
 
     # Paths
     data_dir: Path = Path("data")
-    sec_filings_dir: Path = Path("data/sec-filings")
+    public_docs_dir: Path = Path("data/public")
     internal_docs_dir: Path = Path("data/internal")
+    ingestion_manifest_path: Path = Path("data/.ingestion_manifest.json")
 
     # SEC EDGAR
     sec_edgar_company_name: str = "Nexlify Corp"

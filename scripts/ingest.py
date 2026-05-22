@@ -3,18 +3,24 @@
 NexlifyCorp Ingestion CLI
 
 Examples:
-    # SEC filings
-    uv run python scripts/ingest.py sec NVDA
-    uv run python scripts/ingest.py sec NVDA --year 2024
-    uv run python scripts/ingest.py sec AAPL --form 10-Q
+    # Public filings (SEC EDGAR)
+    uv run python scripts/ingest.py public NVDA
+    uv run python scripts/ingest.py public NVDA --year 2024
+    uv run python scripts/ingest.py public AAPL --form 10-Q
 
     # Internal documents (doc_type: board_memo, risk_register, product_roadmap, etc.)
     uv run python scripts/ingest.py internal TEST-001 board_memo -f doc.md
     uv run python scripts/ingest.py internal TEST-001 risk_register -c "## Risk\n\nContent"
 
+    # Auto-ingest
+    uv run python scripts/ingest.py auto
+    uv run python scripts/ingest.py auto --type sec
+    uv run python scripts/ingest.py auto --type internal
+
     # Management
     uv run python scripts/ingest.py stats
     uv run python scripts/ingest.py list
+    uv run python scripts/ingest.py manifest
     uv run python scripts/ingest.py clear --confirm
 """
 import sys
@@ -34,7 +40,7 @@ from src.ingestion import create_ingestion_pipeline
 from src.utils.logger import logger
 
 # =============================================================================
-# SEC Commands
+# Public Document Commands (SEC EDGAR)
 # =============================================================================
 
 @click.group()
@@ -43,20 +49,20 @@ def cli():
     pass
 
 
-SEC_EXAMPLES = """
+PUBLIC_EXAMPLES = """
 Examples:
-  uv run python scripts/ingest.py sec NVDA
-  uv run python scripts/ingest.py sec NVDA --year 2024
-  uv run python scripts/ingest.py sec AAPL --form 10-Q
+  uv run python scripts/ingest.py public NVDA
+  uv run python scripts/ingest.py public NVDA --year 2024
+  uv run python scripts/ingest.py public AAPL --form 10-Q
 """
 
 
-@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=SEC_EXAMPLES)
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=PUBLIC_EXAMPLES)
 @click.argument("ticker")
 @click.option("--year", type=int, help="Fiscal year (default: latest)")
 @click.option("--form", type=click.Choice(["10-K", "10-Q"]), default="10-K", help="10-K or 10-Q")
-def sec(ticker: str, year: int | None, form: str):
-    """Ingest SEC filing."""
+def public(ticker: str, year: int | None, form: str):
+    """Ingest public filing (SEC EDGAR)."""
     pipeline = create_ingestion_pipeline()
     ticker = ticker.upper()
 
@@ -230,6 +236,172 @@ def clear(confirm: bool):
     count = vs.count
     vs.clear()
     logger.info(f"[green]✓[/green] Cleared [bold]{count}[/bold] documents from vector store")
+
+
+# =============================================================================
+# Auto Commands
+# =============================================================================
+
+AUTO_PUBLIC_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py auto-public
+  uv run python scripts/ingest.py auto-public --tickers NVDA,AAPL,MSFT
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=AUTO_PUBLIC_EXAMPLES)
+@click.option("--tickers", help="Comma-separated tickers (default: config tickers)")
+def auto_public(tickers: str | None):
+    """Auto-ingest all new public filings (SEC EDGAR) from configured tickers."""
+    from src.ingestion.manifest import get_manifest
+
+    manifest = get_manifest()
+    pipeline = create_ingestion_pipeline()
+
+    # Get tickers from param or config
+    if tickers:
+        ticker_list = [t.strip().upper() for t in tickers.split(",")]
+    else:
+        from scripts.config import DEFAULT_TICKERS
+        ticker_list = list(DEFAULT_TICKERS)
+
+    logger.info(f"[bold]Auto-ingesting public filings[/bold] ({len(ticker_list)} tickers)")
+
+    total = 0
+    for ticker in ticker_list:
+        count = pipeline.ingest_sec_filing(ticker=ticker, year=None, form="10-K")
+        if count > 0:
+            total += count
+
+    if total > 0:
+        logger.info(f"[green]✓[/green] Auto-public complete: [bold]{total}[/bold] chunks added")
+    else:
+        logger.info("[cyan]No new public filings to ingest[/cyan]")
+
+
+AUTO_INTERNAL_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py auto-internal
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=AUTO_INTERNAL_EXAMPLES)
+def auto_internal():
+    """Auto-ingest all new internal documents."""
+    from src.ingestion.manifest import get_manifest
+    from src.ingestion.internal_doc_processor import extract_all_internal_documents
+
+    manifest = get_manifest()
+    pipeline = create_ingestion_pipeline()
+
+    # Get internal docs directory from config
+    from src.core.config import get_settings
+    settings = get_settings()
+    internal_dir = settings.internal_docs_dir
+
+    logger.info(f"[bold]Auto-ingesting internal documents[/bold] from {internal_dir}")
+
+    total = 0
+    # Process all markdown files in internal directory
+    for folder in internal_dir.iterdir():
+        if not folder.is_dir():
+            continue
+
+        doc_type = folder.name.replace("-", "_")
+        for md_file in folder.glob("*.md"):
+            doc_id = md_file.stem
+            if manifest.is_ingested(doc_id):
+                continue
+
+            try:
+                content = md_file.read_text(encoding="utf-8")
+                count = pipeline.ingest_internal_doc(
+                    doc_id=doc_id,
+                    doc_type=doc_type,
+                    content=content,
+                )
+                if count > 0:
+                    total += count
+            except Exception as e:
+                logger.warning(f"[yellow]Skipped {doc_id}: {e}[/yellow]")
+
+    if total > 0:
+        logger.info(f"[green]✓[/green] Auto-internal complete: [bold]{total}[/bold] chunks added")
+    else:
+        logger.info("[cyan]No new internal docs to ingest[/cyan]")
+
+
+AUTO_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py auto
+  uv run python scripts/ingest.py auto --type public
+  uv run python scripts/ingest.py auto --type internal
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=AUTO_EXAMPLES)
+@click.option("--type", "auto_type", type=click.Choice(["public", "internal", "all"]), default="all", help="Type to ingest")
+@click.pass_context
+def auto(ctx: click.Context, auto_type: str):
+    """Auto-ingest all new documents (public + internal)."""
+    if auto_type in ("public", "all"):
+        ctx.invoke(auto_public)
+    if auto_type in ("internal", "all"):
+        ctx.invoke(auto_internal)
+
+
+RESET_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py reset NVDA_10K_2024
+  uv run python scripts/ingest.py reset TEST-001
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=RESET_EXAMPLES)
+@click.argument("doc_id")
+def reset(doc_id: str):
+    """Remove document from manifest (allows re-ingest)."""
+    from src.ingestion.manifest import get_manifest
+
+    manifest = get_manifest()
+
+    if manifest.remove(doc_id):
+        logger.info(f"[green]✓[/green] Removed [cyan]{doc_id}[cyan] from manifest")
+    else:
+        logger.warning(f"[yellow]Document not in manifest:[/yellow] [cyan]{doc_id}[cyan]")
+
+
+MANIFEST_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py manifest
+  uv run python scripts/ingest.py manifest --type sec
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=MANIFEST_EXAMPLES)
+@click.option("--type", "filter_type", type=click.Choice(["sec", "internal"]), default=None, help="Filter by type")
+def manifest(filter_type: str | None):
+    """Show ingestion manifest."""
+    from src.ingestion.manifest import get_manifest
+
+    manifest = get_manifest()
+
+    if manifest.count == 0:
+        logger.info("[cyan]Manifest is empty[/cyan]")
+        return
+
+    logger.info(f"[bold]Ingestion Manifest[/bold] ([bold]{manifest.count}[/bold] documents):")
+
+    for doc_id, info in manifest.list_all():
+        if filter_type and info.get("type") != filter_type:
+            continue
+
+        doc_type = info.get("type", "unknown")
+        type_color = "green" if doc_type == "sec" else "yellow"
+        chunks = info.get("chunks", "?")
+        ingested_at = info.get("ingested_at", "unknown")
+
+        logger.info(f"  [{type_color}]{doc_type}[/{type_color}] [cyan]{doc_id}[cyan] ({chunks} chunks)")
 
 
 # =============================================================================

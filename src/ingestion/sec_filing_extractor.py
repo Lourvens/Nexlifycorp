@@ -11,13 +11,14 @@ from src.ingestion.types import (
     SECMetadata,
     SECSection,
     SECFinancials,
+    DataSourceCategory,
     DataSource,
 )
 from src.utils.logger import logger
 from src.utils.text_cleaner import clean_text
 
 
-DEFAULT_OUTPUT_DIR = Path("data/extracted/sec")
+DEFAULT_OUTPUT_DIR = Path("data/extracted/public")
 
 
 def extract_10k(

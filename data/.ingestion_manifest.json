@@ -1,0 +1,80 @@
+{
+  "documents": {
+    "NVDA_10K_latest": {
+      "type": "sec",
+      "ingested_at": "2026-05-22T12:19:43.786625",
+      "chunks": 224,
+      "ticker": "NVDA",
+      "form": "10-K",
+      "year": null
+    },
+    "NVDA_10K_2024": {
+      "type": "sec",
+      "ingested_at": "2026-05-22T12:48:13.047819",
+      "chunks": 2,
+      "ticker": "NVDA",
+      "form": "10-K",
+      "year": 2024
+    },
+    "TEST-001": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T12:48:13.070396",
+      "chunks": 1,
+      "internal_doc_type": "board_memo"
+    },
+    "2025-Q4-Earnings-Preparation-Notes": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:00:45.433989",
+      "chunks": 22,
+      "internal_doc_type": "earnings_prep"
+    },
+    "2025-Q2-Competitor-Analysis-NVIDIA-AMD": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:00:47.138498",
+      "chunks": 22,
+      "internal_doc_type": "competitor_analyses"
+    },
+    "2025-Annual-Internal-Business-Review": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:00:51.845354",
+      "chunks": 34,
+      "internal_doc_type": "financial_reviews"
+    },
+    "2026-Confidential-Product-Roadmap": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:00:54.658049",
+      "chunks": 26,
+      "internal_doc_type": "product_roadmaps"
+    },
+    "2025-Q4-Board-Presentation-Executive-Summary": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:00:56.732568",
+      "chunks": 26,
+      "internal_doc_type": "board_memos"
+    },
+    "2025-Q2-Internal-Risk-Register": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:00:57.806271",
+      "chunks": 16,
+      "internal_doc_type": "risk_registers"
+    },
+    "2025-Cybersecurity-Incident-Report": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:01:00.333126",
+      "chunks": 32,
+      "internal_doc_type": "risk_registers"
+    },
+    "2025-AI-Usage-Governance-Policy": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:01:02.870559",
+      "chunks": 38,
+      "internal_doc_type": "policies"
+    },
+    "2025-Q2-Supply-Chain-Risk-Assessment": {
+      "type": "internal",
+      "ingested_at": "2026-05-22T13:01:04.667014",
+      "chunks": 25,
+      "internal_doc_type": "supply_chain"
+    }
+  }
+}
