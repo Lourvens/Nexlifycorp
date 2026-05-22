@@ -1,0 +1,7 @@
+{
+  "dependencies": [".", "langchain-anthropic>=0.3.0", "langgraph>=1.0.0"],
+  "graphs": {
+    "agent": "./src/agents/retrieval_agent.py:agent"
+  },
+  "env": ".env"
+}

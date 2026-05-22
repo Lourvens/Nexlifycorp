@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     sec_edgar_company_name: str = "Nexlify Corp"
     sec_edgar_email: str = "nexlify@nexlify.com"
 
+    # Anthropic
+    anthropic_base_url: str | None = None
+    anthropic_model: str = "claude-sonnet-4.6"
+
     # HuggingFace (for future use)
     huggingface_api_key: str | None = None
 
