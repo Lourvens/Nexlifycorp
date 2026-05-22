@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 """
-Ingestion CLI - Terminal interface for ingesting documents into the vector store.
+NexlifyCorp Ingestion CLI
 
-Usage:
-    uv run python scripts/ingest.py sec --ticker NVDA --year 2024
+Examples:
+    # SEC filings
+    uv run python scripts/ingest.py sec NVDA
     uv run python scripts/ingest.py sec NVDA --year 2024
-    uv run python scripts/ingest.py internal --doc-id TEST-001 --doc-type board_memo --content "## Title"
+    uv run python scripts/ingest.py sec AAPL --form 10-Q
+
+    # Internal documents (doc_type: board_memo, risk_register, product_roadmap, etc.)
+    uv run python scripts/ingest.py internal TEST-001 board_memo -f doc.md
+    uv run python scripts/ingest.py internal TEST-001 risk_register -c "## Risk\n\nContent"
+
+    # Management
     uv run python scripts/ingest.py stats
     uv run python scripts/ingest.py list
     uv run python scripts/ingest.py clear --confirm
@@ -33,16 +40,24 @@ from src.utils.logger import logger
 
 @click.group()
 def cli():
-    """NexlifyCorp Ingestion CLI - Manage documents in vector store."""
+    """NexlifyCorp document ingestion CLI."""
     pass
 
 
-@cli.command()
+SEC_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py sec NVDA
+  uv run python scripts/ingest.py sec NVDA --year 2024
+  uv run python scripts/ingest.py sec AAPL --form 10-Q
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=SEC_EXAMPLES)
 @click.argument("ticker")
 @click.option("--year", type=int, help="Fiscal year (default: latest)")
-@click.option("--form", type=click.Choice(["10-K", "10-Q"]), default="10-K", help="Form type")
+@click.option("--form", type=click.Choice(["10-K", "10-Q"]), default="10-K", help="10-K or 10-Q")
 def sec(ticker: str, year: int | None, form: str):
-    """Ingest a SEC filing."""
+    """Ingest SEC filing."""
     pipeline = create_ingestion_pipeline()
     ticker = ticker.upper()
 
@@ -71,13 +86,20 @@ def sec(ticker: str, year: int | None, form: str):
 # Internal Document Commands
 # =============================================================================
 
-@cli.command()
+INTERNAL_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py internal TEST-001 board_memo -f doc.md
+  uv run python scripts/ingest.py internal TEST-001 risk_register -c "## Risk\n\nContent"
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=INTERNAL_EXAMPLES)
 @click.argument("doc_id")
 @click.argument("doc_type")
-@click.option("--file", "-f", type=click.Path(exists=True), help="Path to markdown file")
+@click.option("--file", "-f", type=click.Path(exists=True), help="Markdown file path")
 @click.option("--content", "-c", help="Inline markdown content")
 def internal(doc_id: str, doc_type: str, file: str | None, content: str | None):
-    """Ingest an internal document."""
+    """Ingest internal document."""
     # Validate input source
     if file:
         content = Path(file).read_text(encoding="utf-8")
@@ -113,9 +135,15 @@ def internal(doc_id: str, doc_type: str, file: str | None, content: str | None):
 # Stats Command
 # =============================================================================
 
-@cli.command()
+STATS_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py stats
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=STATS_EXAMPLES)
 def stats():
-    """Show vector store statistics."""
+    """Show vector store stats."""
     vs = VectorStore()
 
     click.echo(f"Collection: {vs.collection_name}")
@@ -140,10 +168,17 @@ def stats():
 # List Command
 # =============================================================================
 
-@cli.command()
+LIST_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py list
+  uv run python scripts/ingest.py list --limit 500
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=LIST_EXAMPLES)
 @click.option("--limit", type=int, default=1000, help="Max documents to list")
 def list(limit: int):
-    """List all documents in the vector store."""
+    """List all documents."""
     vs = VectorStore()
 
     if not vs.exists():
@@ -176,7 +211,13 @@ def list(limit: int):
 # Clear Command
 # =============================================================================
 
-@cli.command()
+CLEAR_EXAMPLES = """
+Examples:
+  uv run python scripts/ingest.py clear --confirm
+"""
+
+
+@cli.command(context_settings=dict(ignore_unknown_options=True), epilog=CLEAR_EXAMPLES)
 @click.option("--confirm", is_flag=True, help="Confirm clearing the vector store")
 def clear(confirm: bool):
     """Clear all documents from the vector store."""
