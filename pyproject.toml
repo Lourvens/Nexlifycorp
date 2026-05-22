@@ -17,9 +17,11 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.3",
     "qdrant-client>=1.18.0",
+    "rich>=15.0.0",
     "sec-edgar-downloader>=5.0.0",
     # Sentence transformers (CPU only)
     "sentence-transformers>=5.5.0",
+    "yachalk>=0.1.8",
 ]
 
 [dependency-groups]

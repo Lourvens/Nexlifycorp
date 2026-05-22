@@ -16,3 +16,5 @@ data/public/.cache/
 # Local env
 .env
 data/extracted/
+
+.langgraph_api
