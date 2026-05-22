@@ -57,6 +57,15 @@
       "dependencies": []
     },
     {
+      "id": "ingestion-pipeline",
+      "name": "Ingestion Pipeline Orchestrator",
+      "description": "Orchestrates Extract → Chunk → Store flow. Single entry point for ingesting SEC filings and internal docs into Qdrant via VectorStore.",
+      "status": "implemented",
+      "phase": 2,
+      "location": "src/ingestion/ingestion_pipeline.py",
+      "dependencies": ["sec-chunker", "internal-chunker", "vector-store"]
+    },
+    {
       "id": "text-cleaner",
       "name": "Text Cleaner",
       "description": "Clean SEC filing text - remove box-drawing chars, page footers, normalize whitespace",

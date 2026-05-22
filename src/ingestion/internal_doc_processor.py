@@ -258,6 +258,81 @@ def extract_internal_document(
         return None
 
 
+def extract_internal_document_from_content(
+    content: str,
+    doc_id: str,
+    document_type: str,
+) -> Optional[InternalDocument]:
+    """
+    Extract an internal document from a content string.
+
+    Args:
+        content: Markdown content as string
+        doc_id: Document ID
+        document_type: Type of document (e.g., "board_memo")
+
+    Returns:
+        InternalDocument with sections, or None if error
+    """
+    try:
+        # Parse document metadata
+        doc_metadata = parse_metadata_from_header(content)
+
+        # Extract sections using temp file approach for code reuse
+        import tempfile
+        import os
+
+        with tempfile.NamedTemporaryFile(
+            mode='w',
+            suffix='.md',
+            delete=False,
+            encoding='utf-8'
+        ) as tmp:
+            tmp.write(content)
+            tmp_path = Path(tmp.name)
+
+        try:
+            sections = extract_sections_from_markdown(tmp_path)
+        finally:
+            os.unlink(tmp_path)
+
+        # Build InternalSection objects
+        internal_sections = []
+
+        for i, section in enumerate(sections):
+            # Build section path (parent headers)
+            section_path = section["title"]
+
+            # Get parent H2 if this is H3
+            if section["level"] == 3 and i > 0:
+                for j in range(i - 1, -1, -1):
+                    if sections[j]["level"] == 2:
+                        section_path = f"{sections[j]['title']} / {section['title']}"
+                        break
+
+            internal_section = InternalSection(
+                title=section["title"],
+                content=section["text"][:50000] if len(section["text"]) > 50000 else section["text"],
+                level=section["level"],
+                document_type=document_type,
+                document_id=doc_id or doc_metadata.get("document_id"),
+                classification=doc_metadata.get("classification", "CONFIDENTIAL"),
+                date=doc_metadata.get("date"),
+                section_path=section_path,
+                topics=extract_topics(section["text"]),
+                contains_financials=has_financials(section["text"]),
+                contains_projections=has_projections(section["text"]),
+            )
+
+            internal_sections.append(internal_section)
+
+        return InternalDocument(sections=internal_sections)
+
+    except Exception as e:
+        logger.error(f"Error extracting internal doc from content: {e}")
+        return None
+
+
 def extract_all_internal_documents(
     base_path: Path = Path("data/internal"),
     output_dir: Path = DEFAULT_OUTPUT_DIR,

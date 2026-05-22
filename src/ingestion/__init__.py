@@ -9,9 +9,16 @@ from src.ingestion.types import (
 )
 from src.ingestion.internal_doc_processor import (
     extract_internal_document,
+    extract_internal_document_from_content,
     extract_all_internal_documents,
     InternalSection,
     InternalDocument,
+)
+from src.ingestion.ingestion_pipeline import (
+    IngestionPipeline,
+    create_ingestion_pipeline,
+    get_ingestion_pipeline,
+    reset_ingestion_pipeline,
 )
 
 __all__ = [
@@ -25,7 +32,13 @@ __all__ = [
     "DataSource",
     # Internal Document
     "extract_internal_document",
+    "extract_internal_document_from_content",
     "extract_all_internal_documents",
     "InternalSection",
     "InternalDocument",
+    # Pipeline
+    "IngestionPipeline",
+    "create_ingestion_pipeline",
+    "get_ingestion_pipeline",
+    "reset_ingestion_pipeline",
 ]
