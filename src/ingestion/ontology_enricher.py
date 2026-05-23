@@ -11,24 +11,21 @@ logger = __import__("src.utils").utils.get_logger(__name__)
 
 
 # =============================================================================
-# TODO: SLM Integration for Cost Efficiency
+# TODO: Support Smaller/Lightweight Models for Ontology Enrichment
 # =============================================================================
 # See docs/plans/slm-ontology-plan.md for the full plan.
 #
-# Currently using Claude Sonnet (frontier model) for high-quality structured
-# output. This works well but costs ~$0.01-0.02 per chunk.
-#
-# Switching to a Small Language Model (SLM) like Qwen2.5-7B-Instruct could reduce
-# cost to ~$0.001/chunk — 10-20x cheaper — with acceptable quality for this
-# bounded extraction task.
+# Currently using a frontier model for structured output. A smaller or medium
+# language model could achieve acceptable results for this bounded extraction
+# task (identify concepts, themes, departments from financial text chunks).
 #
 # The switch involves:
-#   1. Add ontology_provider (anthropic|huggingface) to config.py
+#   1. Add ontology_provider to config.py (swappable provider)
 #   2. Add HuggingFace LLM support to src/core/llm.py
 #   3. Update _get_chain() to use the configured provider
 #   4. Tune temperature for better JSON adherence on smaller models
 #
-# See slm-ontology-plan.md for candidate models and evaluation criteria.
+# See slm-ontology-plan.md for evaluation criteria.
 # =============================================================================
 
 ONTOLOGY_SYSTEM_PROMPT = """You are an expert financial and business analyst specializing in corporate SEC filings and enterprise documents. Your task is to analyze the provided text chunk and extract structured semantic metadata.
