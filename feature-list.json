@@ -66,6 +66,15 @@
       "dependencies": ["sec-chunker", "internal-chunker", "vector-store"]
     },
     {
+      "id": "ontology-enrichment",
+      "name": "Ontology Enrichment",
+      "description": "LLM-powered semantic metadata injection (concepts, strategic_themes, departments) into chunks via structured output. Pluggable via enable_ontology flag.",
+      "status": "in_progress",
+      "phase": "2-3",
+      "location": "src/ingestion/ontology_enricher.py",
+      "dependencies": ["langchain-anthropic"]
+    },
+    {
       "id": "text-cleaner",
       "name": "Text Cleaner",
       "description": "Clean SEC filing text - remove box-drawing chars, page footers, normalize whitespace",

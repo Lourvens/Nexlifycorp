@@ -22,6 +22,14 @@ from src.ingestion.chunk_strategies.internal_chunker import InternalChunker
 from src.ingestion.manifest import get_manifest
 from src.utils.logger import logger
 
+# Optional ontology enrichment (lazy import to avoid hard dependency)
+try:
+    from src.ingestion.ontology_enricher import OntologyEnrichmentStep
+    ONTOLOGY_AVAILABLE = True
+except ImportError:
+    ONTOLOGY_AVAILABLE = False
+    OntologyEnrichmentStep = None
+
 # Forward reference to avoid circular import
 VectorStore = "VectorStore"
 
@@ -41,14 +49,21 @@ class IngestionPipeline:
     - ingest_*  : Full pipeline, store to vector store (side effects)
     """
 
-    def __init__(self, vector_store: VectorStore):
+    def __init__(self, vector_store: VectorStore, enable_ontology: bool = False):
         """
         Initialize pipeline with vector store.
 
         Args:
             vector_store: VectorStore instance for storage
+            enable_ontology: If True, enable LLM-powered ontology enrichment
         """
         self.vector_store = vector_store
+        self._ontology_step: OntologyEnrichmentStep | None = None
+        if enable_ontology and ONTOLOGY_AVAILABLE:
+            self._ontology_step = OntologyEnrichmentStep()
+            logger.debug("Ontology enrichment enabled")
+        elif enable_ontology and not ONTOLOGY_AVAILABLE:
+            logger.warning("enable_ontology=True but ontology_enricher not available")
 
     # =========================================================================
     # SEC Filing Processing
@@ -125,6 +140,14 @@ class IngestionPipeline:
         chunks = self.process_sec_filing(ticker, year, form)
         if chunks:
             self.vector_store.add_chunks(chunks)
+            # Ontology enrichment (after store, no re-embed needed)
+            if self._ontology_step is not None:
+                self._ontology_step.process_batch(chunks)
+                for chunk in chunks:
+                    self.vector_store.update_chunk_metadata(
+                        chunk.metadata.chunk_id,
+                        chunk.metadata.model_dump(mode="json"),
+                    )
             manifest.mark_ingested(
                 doc_id=doc_id,
                 doc_type="sec",
@@ -208,6 +231,14 @@ class IngestionPipeline:
         chunks = self.process_internal_doc(doc_id, doc_type, content)
         if chunks:
             self.vector_store.add_chunks(chunks)
+            # Ontology enrichment (after store, no re-embed needed)
+            if self._ontology_step is not None:
+                self._ontology_step.process_batch(chunks)
+                for chunk in chunks:
+                    self.vector_store.update_chunk_metadata(
+                        chunk.metadata.chunk_id,
+                        chunk.metadata.model_dump(mode="json"),
+                    )
             manifest.mark_ingested(
                 doc_id=doc_id,
                 doc_type="internal",
@@ -254,6 +285,8 @@ _pipeline: Optional[IngestionPipeline] = None
 
 def create_ingestion_pipeline(
     vector_store: "VectorStore | None" = None,
+    *,
+    enable_ontology: bool | None = None,
     **vector_store_kwargs,
 ) -> IngestionPipeline:
     """
@@ -261,6 +294,8 @@ def create_ingestion_pipeline(
 
     Args:
         vector_store: Optional VectorStore instance (creates if not provided)
+        enable_ontology: If None, reads from settings (ENABLE_ONTOLOGY env var).
+                         If True/False, overrides settings.
         **vector_store_kwargs: Passed to VectorStore if created
 
     Returns:
@@ -269,7 +304,13 @@ def create_ingestion_pipeline(
     if vector_store is None:
         from src.core import VectorStore
         vector_store = VectorStore(**vector_store_kwargs)
-    return IngestionPipeline(vector_store)
+
+    # Default to settings value if not explicitly passed
+    if enable_ontology is None:
+        from src.core.config import get_settings
+        enable_ontology = get_settings().enable_ontology
+
+    return IngestionPipeline(vector_store, enable_ontology=enable_ontology)
 
 
 def get_ingestion_pipeline() -> IngestionPipeline:

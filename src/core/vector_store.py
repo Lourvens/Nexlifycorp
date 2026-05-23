@@ -54,7 +54,8 @@ QDRANT_URL = "http://localhost:6333"
 METADATA_FILTER_FIELDS = frozenset([
     "is_public", "content_type", "ticker", "source_category",
     "classification", "access_level", "sec_form", "sec_section",
-    "internal_doc_type", "fiscal_year", "fiscal_quarter", "document_id"
+    "internal_doc_type", "fiscal_year", "fiscal_quarter", "document_id",
+    "concepts", "strategic_themes", "departments",
 ])
 
 
@@ -259,6 +260,10 @@ class VectorStore:
             "fiscal_year": PayloadSchemaType.INTEGER,
             "fiscal_quarter": PayloadSchemaType.INTEGER,
             "document_id": PayloadSchemaType.KEYWORD,
+            # Ontology enrichment fields
+            "concepts": PayloadSchemaType.KEYWORD,
+            "strategic_themes": PayloadSchemaType.KEYWORD,
+            "departments": PayloadSchemaType.KEYWORD,
         }
         
         for field, schema in field_schemas.items():
@@ -333,7 +338,26 @@ class VectorStore:
     def add_documents_from_chunks(self, chunks: list) -> list[str]:
         """Alias for add_chunks (more descriptive name)."""
         return self.add_chunks(chunks)
-    
+
+    def update_chunk_metadata(self, chunk_id: str, metadata: dict) -> None:
+        """
+        Update metadata for an existing chunk (no re-embed).
+
+        Uses Qdrant's set_payload to update only the payload/metadata,
+        leaving the vector unchanged.
+
+        Args:
+            chunk_id: Original chunk ID string
+            metadata: Updated metadata dict (full metadata, not nested)
+        """
+        uuid = self._string_to_uuid(chunk_id)
+        self._client.set_payload(
+            collection_name=self.collection_name,
+            payload=metadata,
+            points=[uuid],
+        )
+        logger.debug(f"Updated metadata for chunk {chunk_id}")
+
     def delete(self, ids: list[str]) -> None:
         """Delete documents by original string IDs."""
         uuids = [self._string_to_uuid(id_str) for id_str in ids]
@@ -448,12 +472,12 @@ class VectorStore:
         return [parse_record_to_document(r) for r in records]
     
     def get_by_original_id(self, original_id: str) -> list[Document]:
-        """Get document by its original string ID."""
+        """Get documents by their original string ID (chunk_id)."""
         records, _ = self._client.scroll(
             collection_name=self.collection_name,
             scroll_filter=Filter(
                 must=[FieldCondition(
-                    key="metadata.original_id",
+                    key="metadata.chunk_id",
                     match=MatchValue(value=original_id)
                 )]
             ),
@@ -461,7 +485,24 @@ class VectorStore:
             with_payload=True,
             with_vectors=False,
         )
-        
+
+        return [parse_record_to_document(r) for r in records]
+
+    def get_by_document_id(self, document_id: str) -> list[Document]:
+        """Get all chunks belonging to a document."""
+        records, _ = self._client.scroll(
+            collection_name=self.collection_name,
+            scroll_filter=Filter(
+                must=[FieldCondition(
+                    key="metadata.document_id",
+                    match=MatchValue(value=document_id)
+                )]
+            ),
+            limit=10000,
+            with_payload=True,
+            with_vectors=False,
+        )
+
         return [parse_record_to_document(r) for r in records]
 
 

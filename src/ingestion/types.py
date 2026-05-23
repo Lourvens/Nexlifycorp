@@ -167,6 +167,27 @@ class ChunkMetadata(BaseModel):
     # Topics extracted from content
     topics: list[str] = Field(default_factory=list)
 
+    # ─────────────────────────────────────────────────────────────────────
+    # ONTOLOGY ENRICHMENT (LLM-powered semantic metadata)
+    # ─────────────────────────────────────────────────────────────────────
+
+    concepts: list[str] = Field(
+        default_factory=list,
+        description="Key business/financial concepts extracted by LLM"
+    )
+    strategic_themes: list[str] = Field(
+        default_factory=list,
+        description="Strategic themes (growth, cost efficiency, compliance, etc.)"
+    )
+    departments: list[str] = Field(
+        default_factory=list,
+        description="Relevant departments (finance, engineering, legal, etc.)"
+    )
+    ontology_enrichment_failed: bool = Field(
+        default=False,
+        description="True if LLM enrichment failed and concepts/themes/depts are empty"
+    )
+
 
 class Chunk(BaseModel):
     """
@@ -228,6 +249,12 @@ class Chunk(BaseModel):
             
             # Topics (join to string for Chroma)
             "topics": ",".join(m.topics) if m.topics else "",
+
+            # Ontology enrichment
+            "concepts": ",".join(m.concepts) if m.concepts else "",
+            "strategic_themes": ",".join(m.strategic_themes) if m.strategic_themes else "",
+            "departments": ",".join(m.departments) if m.departments else "",
+            "ontology_enrichment_failed": m.ontology_enrichment_failed,
         }
     
     def to_dict(self) -> dict:
@@ -256,6 +283,10 @@ class Chunk(BaseModel):
                 "contains_projections": self.metadata.contains_projections,
                 "contains_confidential_info": self.metadata.contains_confidential_info,
                 "topics": self.metadata.topics,
+                "concepts": self.metadata.concepts,
+                "strategic_themes": self.metadata.strategic_themes,
+                "departments": self.metadata.departments,
+                "ontology_enrichment_failed": self.metadata.ontology_enrichment_failed,
             },
             "source_filename": self.source_filename,
         }

@@ -20,6 +20,10 @@ from src.ingestion.ingestion_pipeline import (
     get_ingestion_pipeline,
     reset_ingestion_pipeline,
 )
+from src.ingestion.ontology_enricher import (
+    OntologyEnrichmentStep,
+    OntologySchema,
+)
 
 __all__ = [
     # SEC Filing
@@ -41,4 +45,7 @@ __all__ = [
     "create_ingestion_pipeline",
     "get_ingestion_pipeline",
     "reset_ingestion_pipeline",
+    # Ontology Enrichment
+    "OntologyEnrichmentStep",
+    "OntologySchema",
 ]

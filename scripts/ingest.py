@@ -263,7 +263,7 @@ def auto_public(tickers: str | None):
         ticker_list = [t.strip().upper() for t in tickers.split(",")]
     else:
         from scripts.config import DEFAULT_TICKERS
-        ticker_list = list(DEFAULT_TICKERS)
+        ticker_list = [*DEFAULT_TICKERS]
 
     logger.info(f"[bold]Auto-ingesting public filings[/bold] ({len(ticker_list)} tickers)")
 

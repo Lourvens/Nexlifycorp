@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     anthropic_base_url: str | None = None
     anthropic_model: str = "claude-sonnet-4.6"
 
+    # Ontology Enrichment (LLM-powered semantic metadata injection)
+    enable_ontology: bool = False
+
     # HuggingFace (optionnal for embedding with sentence transformers)
     hf_token: str | None = None
 
