@@ -75,6 +75,30 @@
       "ingested_at": "2026-05-22T13:01:04.667014",
       "chunks": 25,
       "internal_doc_type": "supply_chain"
+    },
+    "CRM_10K_latest": {
+      "type": "sec",
+      "ingested_at": "2026-05-22T16:18:49.189929",
+      "chunks": 244,
+      "ticker": "CRM",
+      "form": "10-K",
+      "year": null
+    },
+    "NOW_10K_latest": {
+      "type": "sec",
+      "ingested_at": "2026-05-22T16:20:28.877287",
+      "chunks": 215,
+      "ticker": "NOW",
+      "form": "10-K",
+      "year": null
+    },
+    "WDAY_10K_latest": {
+      "type": "sec",
+      "ingested_at": "2026-05-22T16:21:11.655298",
+      "chunks": 247,
+      "ticker": "WDAY",
+      "form": "10-K",
+      "year": null
     }
   }
 }
