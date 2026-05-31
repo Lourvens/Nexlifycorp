@@ -1,0 +1,958 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Nexlify Corp API",
+    "version": "2.0",
+    "description": "Hybrid KB + Agentic AI platform combining SEC EDGAR filings with internal enterprise documents for financial intelligence."
+  },
+  "servers": [
+    {
+      "url": "https://api.nexlify.com",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/api/v2/documents": {
+      "get": {
+        "summary": "List documents",
+        "operationId": "listDocuments",
+        "tags": ["Documents"],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["PUBLIC_SEC", "INTERNAL_NEXLIFY"]
+            }
+          },
+          {
+            "name": "content_type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["RISK_FACTORS", "FINANCIAL_STATEMENTS", "MANAGEMENT_DISCUSSION"]
+            }
+          },
+          {
+            "name": "access_level",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "STRICTLY_CONFIDENTIAL"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "headers": {
+              "X-RateLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-RateLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create document",
+        "operationId": "createDocument",
+        "tags": ["Documents"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Document created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/v2/documents/{document_id}": {
+      "get": {
+        "summary": "Get document",
+        "operationId": "getDocument",
+        "tags": ["Documents"],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update document",
+        "operationId": "updateDocument",
+        "tags": ["Documents"],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Document updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete document",
+        "operationId": "deleteDocument",
+        "tags": ["Documents"],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Document deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/v2/inference": {
+      "post": {
+        "summary": "Run inference",
+        "operationId": "runInference",
+        "tags": ["Inference"],
+        "x-rate-limit": {
+          "rpm": 100,
+          "description": "Endpoint-specific limit of 100 requests per minute"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InferenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Inference completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Rate limit exceeded or endpoint limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/training": {
+      "post": {
+        "summary": "Start training job",
+        "operationId": "startTraining",
+        "tags": ["Training"],
+        "x-rate-limit": {
+          "rpm": 50,
+          "description": "Endpoint-specific limit of 50 requests per minute"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Training job started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "Rate limit exceeded or endpoint limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/training/{job_id}": {
+      "get": {
+        "summary": "Get training job status",
+        "operationId": "getTrainingStatus",
+        "tags": ["Training"],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Training job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/v2/rate-limit-status": {
+      "get": {
+        "summary": "Get rate limit status",
+        "operationId": "getRateLimitStatus",
+        "tags": ["Rate Limiting"],
+        "responses": {
+          "200": {
+            "description": "Rate limit status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateLimitStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/v2/webhooks": {
+      "get": {
+        "summary": "List webhooks",
+        "operationId": "listWebhooks",
+        "tags": ["Webhooks"],
+        "responses": {
+          "200": {
+            "description": "List of webhooks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Webhook"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create webhook",
+        "operationId": "createWebhook",
+        "tags": ["Webhooks"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebhookRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Webhook"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/v2/webhooks/{webhook_id}": {
+      "delete": {
+        "summary": "Delete webhook",
+        "operationId": "deleteWebhook",
+        "tags": ["Webhooks"],
+        "parameters": [
+          {
+            "name": "webhook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Webhook deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "description": "API key authentication. Prefix with nx_live_, nx_test_, or nx_dev_."
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Bearer token authentication"
+      },
+      "OAuth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://api.nexlify.com/oauth/authorize",
+            "tokenUrl": "https://api.nexlify.com/oauth/token",
+            "scopes": {
+              "read:documents": "Read document content",
+              "write:documents": "Create/update documents",
+              "read:users": "Read user information",
+              "admin": "Administrative operations"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["PUBLIC_SEC", "INTERNAL_NEXLIFY"]
+          },
+          "content_type": {
+            "type": "string",
+            "enum": ["RISK_FACTORS", "FINANCIAL_STATEMENTS", "MANAGEMENT_DISCUSSION"]
+          },
+          "access_level": {
+            "type": "string",
+            "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "STRICTLY_CONFIDENTIAL"]
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DocumentList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            }
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      },
+      "CreateDocumentRequest": {
+        "type": "object",
+        "required": ["title", "content", "category", "content_type"],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["PUBLIC_SEC", "INTERNAL_NEXLIFY"]
+          },
+          "content_type": {
+            "type": "string",
+            "enum": ["RISK_FACTORS", "FINANCIAL_STATEMENTS", "MANAGEMENT_DISCUSSION"]
+          },
+          "access_level": {
+            "type": "string",
+            "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "STRICTLY_CONFIDENTIAL"],
+            "default": "INTERNAL"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      },
+      "UpdateDocumentRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      },
+      "InferenceRequest": {
+        "type": "object",
+        "required": ["prompt", "model"],
+        "properties": {
+          "prompt": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "document_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "model": {
+            "type": "string"
+          },
+          "gpu_count": {
+            "type": "integer",
+            "enum": [1, 2, 4, 8, 16],
+            "description": "Number of GPUs to use for inference"
+          }
+        }
+      },
+      "InferenceResult": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "output": {
+            "type": "string"
+          },
+          "processing_time_ms": {
+            "type": "integer"
+          }
+        }
+      },
+      "TrainingRequest": {
+        "type": "object",
+        "required": ["model_name", "training_data", "gpu_count"],
+        "properties": {
+          "model_name": {
+            "type": "string"
+          },
+          "training_data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gpu_count": {
+            "type": "integer",
+            "enum": [1, 2, 4, 8, 16]
+          },
+          "epochs": {
+            "type": "integer"
+          },
+          "hyperparameters": {
+            "type": "object",
+            "properties": {
+              "learning_rate": {
+                "type": "number"
+              },
+              "batch_size": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "TrainingJob": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "model_name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["pending", "running", "completed", "failed"]
+          },
+          "progress_percent": {
+            "type": "integer"
+          },
+          "gpu_count": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateWebhookRequest": {
+        "type": "object",
+        "required": ["url", "events"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "document.created",
+                "document.updated",
+                "document.deleted",
+                "training.started",
+                "training.progress",
+                "training.completed",
+                "training.failed",
+                "inference.started",
+                "inference.completed",
+                "inference.failed"
+              ]
+            }
+          },
+          "secret": {
+            "type": "string"
+          }
+        }
+      },
+      "RateLimitStatus": {
+        "type": "object",
+        "properties": {
+          "plan": {
+            "type": "string",
+            "enum": ["free", "starter", "platform", "pro", "enterprise"]
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Requests per minute limit"
+          },
+          "remaining": {
+            "type": "integer"
+          },
+          "reset_at": {
+            "type": "integer",
+            "description": "Unix timestamp when the limit resets"
+          },
+          "endpoint_limits": {
+            "type": "object",
+            "properties": {
+              "/api/v2/inference": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "integer"
+                  },
+                  "remaining": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "/api/v2/training": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "integer"
+                  },
+                  "remaining": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "RateLimitError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["RATE_LIMIT_EXCEEDED", "ENDPOINT_RATE_LIMIT_EXCEEDED"]
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "limit": {
+                    "type": "integer"
+                  },
+                  "reset_at": {
+                    "type": "integer"
+                  },
+                  "retry_after": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Missing or invalid credentials",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimitExceeded": {
+        "description": "Rate limit exceeded",
+        "headers": {
+          "Retry-After": {
+            "schema": {
+              "type": "integer",
+              "description": "Seconds to wait before retrying"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RateLimitError"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Documents",
+      "description": "Document management operations"
+    },
+    {
+      "name": "Inference",
+      "description": "AI inference operations"
+    },
+    {
+      "name": "Training",
+      "description": "Model training operations"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Webhook management"
+    },
+    {
+      "name": "Rate Limiting",
+      "description": "Rate limit status and management"
+    }
+  ]
+}

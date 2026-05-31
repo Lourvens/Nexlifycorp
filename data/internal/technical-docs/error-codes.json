@@ -1,0 +1,266 @@
+{
+  "error_codes": [
+    {
+      "code": "RATE_LIMIT_EXCEEDED",
+      "http_status": 429,
+      "message": "You have exceeded your rate limit",
+      "description": "The API request has been rate limited. Check the Retry-After header and wait before retrying.",
+      "details": {
+        "limit": "Integer - Maximum requests per minute for your plan",
+        "reset_at": "Integer - Unix timestamp when the rate limit resets",
+        "retry_after": "Integer - Seconds to wait before retrying"
+      },
+      "plans_affected": ["free", "starter", "platform", "pro", "enterprise"],
+      "rate_limits": {
+        "free": 60,
+        "starter": 300,
+        "platform": 1000,
+        "pro": 3000,
+        "enterprise": 10000
+      }
+    },
+    {
+      "code": "ENDPOINT_RATE_LIMIT_EXCEEDED",
+      "http_status": 429,
+      "message": "You have exceeded the rate limit for this endpoint",
+      "description": "A specific endpoint has a lower rate limit than your overall plan limit.",
+      "details": {
+        "endpoint": "String - The endpoint that has been rate limited",
+        "limit": "Integer - Maximum requests per minute for this endpoint",
+        "reset_at": "Integer - Unix timestamp when the rate limit resets",
+        "retry_after": "Integer - Seconds to wait before retrying"
+      },
+      "plans_affected": ["enterprise"],
+      "endpoint_limits": {
+        "/api/v2/inference": 100,
+        "/api/v2/training": 50
+      }
+    },
+    {
+      "code": "GPU_LIMIT_EXCEEDED",
+      "http_status": 429,
+      "message": "GPU job concurrent limit exceeded",
+      "description": "You have reached the maximum number of concurrent GPU jobs for this region.",
+      "details": {
+        "region": "String - AWS region where the limit was exceeded",
+        "current_jobs": "Integer - Number of currently running jobs",
+        "max_jobs": "Integer - Maximum concurrent jobs allowed",
+        "gpu_count": "Integer - Number of GPUs requested"
+      },
+      "plans_affected": ["platform", "pro", "enterprise"],
+      "gpu_limits": {
+        "before_v3.2": {
+          "max_concurrent_jobs_per_region": 50
+        },
+        "v3.2_and_after": {
+          "max_concurrent_jobs_per_region": 100
+        }
+      }
+    },
+    {
+      "code": "INVALID_API_KEY",
+      "http_status": 401,
+      "message": "Invalid or missing API key",
+      "description": "The API key provided is invalid, missing, or has been revoked.",
+      "details": {
+        "key_prefix": "String - The prefix of the provided key (nx_live_, nx_test_, nx_dev_)"
+      },
+      "resolution": "Provide a valid API key with the correct prefix for your environment."
+    },
+    {
+      "code": "AUTHENTICATION_FAILED",
+      "http_status": 401,
+      "message": "Authentication failed",
+      "description": "The provided authentication credentials are invalid.",
+      "resolution": "Verify your credentials and try again. For OAuth, ensure the token has not expired."
+    },
+    {
+      "code": "INSUFFICIENT_PERMISSIONS",
+      "http_status": 403,
+      "message": "Insufficient permissions to perform this operation",
+      "description": "Your API key does not have the required scopes or permissions for this operation.",
+      "details": {
+        "required_scope": "String - The scope required for this operation",
+        "current_scopes": "Array - Scopes available to your API key"
+      },
+      "resolution": "Request an API key with the required scope or contact your administrator."
+    },
+    {
+      "code": "RESOURCE_NOT_FOUND",
+      "http_status": 404,
+      "message": "The requested resource was not found",
+      "description": "The resource identified by the request does not exist.",
+      "details": {
+        "resource_type": "String - Type of resource that was not found",
+        "resource_id": "String - Identifier of the resource that was not found"
+      }
+    },
+    {
+      "code": "DOCUMENT_NOT_FOUND",
+      "http_status": 404,
+      "message": "Document not found",
+      "description": "The specified document does not exist or has been deleted.",
+      "details": {
+        "document_id": "String - The document ID that was not found"
+      }
+    },
+    {
+      "code": "VALIDATION_ERROR",
+      "http_status": 400,
+      "message": "Request validation failed",
+      "description": "The request body or parameters are invalid or malformed.",
+      "details": {
+        "field": "String - The field that failed validation",
+        "reason": "String - The reason for validation failure"
+      }
+    },
+    {
+      "code": "INVALID_GPU_COUNT",
+      "http_status": 400,
+      "message": "Invalid GPU count specified",
+      "description": "The specified GPU count is not valid for GPU jobs.",
+      "details": {
+        "provided_count": "Integer - The GPU count that was provided",
+        "valid_counts": "Array - Valid GPU counts (1, 2, 4, 8, 16)"
+      },
+      "resolution": "Use a valid GPU count: 1, 2, 4, 8, or 16."
+    },
+    {
+      "code": "MODEL_NOT_FOUND",
+      "http_status": 404,
+      "message": "The specified model does not exist",
+      "description": "The model referenced in the request cannot be found.",
+      "details": {
+        "model_name": "String - The model name that was not found"
+      }
+    },
+    {
+      "code": "TRAINING_JOB_NOT_FOUND",
+      "http_status": 404,
+      "message": "Training job not found",
+      "description": "The specified training job does not exist or has expired.",
+      "details": {
+        "job_id": "String - The training job ID that was not found"
+      }
+    },
+    {
+      "code": "GPU_ALLOCATION_FAILED",
+      "http_status": 503,
+      "message": "Unable to allocate GPU resources",
+      "description": "The system is unable to allocate the requested GPU resources at this time.",
+      "details": {
+        "requested_gpus": "Integer - Number of GPUs requested",
+        "available_gpus": "Integer - Number of GPUs currently available",
+        "region": "String - The region where allocation was attempted"
+      },
+      "resolution": "Retry the request later or reduce the number of GPUs requested."
+    },
+    {
+      "code": "WEBHOOK_DELIVERY_FAILED",
+      "http_status": 500,
+      "message": "Webhook delivery failed",
+      "description": "The system was unable to deliver a webhook event.",
+      "details": {
+        "webhook_id": "String - The webhook ID",
+        "event_id": "String - The event ID",
+        "attempt_count": "Integer - Number of delivery attempts made"
+      },
+      "retry_policy": "Up to 5 retry attempts with exponential backoff"
+    },
+    {
+      "code": "INTERNAL_SERVER_ERROR",
+      "http_status": 500,
+      "message": "An internal server error occurred",
+      "description": "An unexpected error occurred on the server. The issue has been logged.",
+      "resolution": "If the issue persists, contact support with the request ID from the response headers."
+    },
+    {
+      "code": "SERVICE_UNAVAILABLE",
+      "http_status": 503,
+      "message": "Service temporarily unavailable",
+      "description": "The service is undergoing maintenance or is temporarily unavailable.",
+      "details": {
+        "expected_recovery": "String - Estimated time of recovery if available"
+      },
+      "resolution": "Check the deployment window schedule (Tuesday-Thursday, 10 AM - 4 PM PST) for maintenance windows."
+    },
+    {
+      "code": "DATABASE_ERROR",
+      "http_status": 500,
+      "message": "Database operation failed",
+      "description": "A database operation failed. This may be a temporary condition.",
+      "resolution": "Retry the request. If the issue persists, contact support."
+    },
+    {
+      "code": "INVALID_REQUEST_FORMAT",
+      "http_status": 400,
+      "message": "The request format is invalid",
+      "description": "The request body could not be parsed as valid JSON or has malformed structure.",
+      "resolution": "Ensure the request body is valid JSON and properly formatted."
+    },
+    {
+      "code": "MISSING_REQUIRED_FIELD",
+      "http_status": 400,
+      "message": "A required field is missing from the request",
+      "description": "The request is missing a required field.",
+      "details": {
+        "field_name": "String - The name of the missing required field"
+      }
+    },
+    {
+      "code": "API_VERSION_DEPRECATED",
+      "http_status": 410,
+      "message": "The requested API version is deprecated",
+      "description": "The API version being used has been deprecated and will be removed.",
+      "details": {
+        "current_version": "String - The version being used (v1)",
+        "supported_version": "String - The currently supported version (v2)",
+        "deprecation_date": "String - When v1 key creation stopped (March 1, 2025)",
+        "eol_date_standard": "String - Standard v1 shutdown (June 1, 2025)",
+        "eol_date_enterprise": "String - Enterprise v1 shutdown (September 1, 2025)"
+      },
+      "resolution": "Migrate to API v2. See the migration guide for details on breaking changes."
+    },
+    {
+      "code": "ACCESS_LEVEL_FORBIDDEN",
+      "http_status": 403,
+      "message": "Your access level does not permit this operation",
+      "description": "The resource requires a higher access level than your API key provides.",
+      "details": {
+        "required_access_level": "String - The required access level",
+        "current_access_level": "String - The access level of the API key"
+      },
+      "access_levels": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "STRICTLY_CONFIDENTIAL"]
+    },
+    {
+      "code": "INVALID_ACCESS_LEVEL",
+      "http_status": 400,
+      "message": "Invalid access level specified",
+      "description": "The specified access level is not a valid value.",
+      "details": {
+        "provided_value": "String - The value that was provided",
+        "valid_values": "Array - Valid access level values (PUBLIC, INTERNAL, CONFIDENTIAL, STRICTLY_CONFIDENTIAL)"
+      }
+    },
+    {
+      "code": "INVALID_DATA_SOURCE_CATEGORY",
+      "http_status": 400,
+      "message": "Invalid data source category specified",
+      "description": "The specified data source category is not valid.",
+      "details": {
+        "provided_value": "String - The value that was provided",
+        "valid_values": "Array - Valid category values (PUBLIC_SEC, INTERNAL_NEXLIFY)"
+      }
+    },
+    {
+      "code": "INVALID_CONTENT_TYPE",
+      "http_status": 400,
+      "message": "Invalid content type specified",
+      "description": "The specified content type is not valid.",
+      "details": {
+        "provided_value": "String - The value that was provided",
+        "valid_values": "Array - Valid content type values (RISK_FACTORS, FINANCIAL_STATEMENTS, MANAGEMENT_DISCUSSION, etc.)"
+      }
+    }
+  ]
+}
