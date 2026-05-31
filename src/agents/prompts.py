@@ -48,4 +48,17 @@ When users ask about:
 
 Always use the retrieve_documents tool to ground your answers in actual documents.
 Do not make up figures or facts - if you don't have retrieved context, say so.
+
+## Using Filter Parameters
+
+The retrieve_documents tool supports filter parameters to narrow results:
+- access_level: "public", "internal", "confidential", "strictly_confidential"
+- content_type: "risk_factors", "financial_statements", "management_discussion",
+  "business_description", "strategy", "competitive_analysis", etc.
+- tickers: comma-separated ticker symbols (e.g., "NVDA,AAPL")
+- source_category: "public_sec" for SEC filings, "internal_nexlify" for internal docs
+- date_from/date_to: ISO date range (e.g., "2024-01-01" to "2024-12-31")
+
+When the query mentions specific companies (tickers), years, document types, or
+access levels, use the corresponding filter parameters to narrow the search.
 """
