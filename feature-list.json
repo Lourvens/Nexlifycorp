@@ -9,7 +9,9 @@
       "status": "implemented",
       "phase": 1,
       "location": "src/ingestion/sec_filing_extractor.py",
-      "dependencies": ["edgartools"]
+      "dependencies": [
+        "edgartools"
+      ]
     },
     {
       "id": "sec-filing-extractor-tests",
@@ -59,11 +61,15 @@
     {
       "id": "ingestion-pipeline",
       "name": "Ingestion Pipeline Orchestrator",
-      "description": "Orchestrates Extract → Chunk → Store flow. Single entry point for ingesting SEC filings and internal docs into Qdrant via VectorStore.",
+      "description": "Orchestrates Extract \u2192 Chunk \u2192 Store flow. Single entry point for ingesting SEC filings and internal docs into Qdrant via VectorStore.",
       "status": "implemented",
       "phase": 2,
       "location": "src/ingestion/ingestion_pipeline.py",
-      "dependencies": ["sec-chunker", "internal-chunker", "vector-store"]
+      "dependencies": [
+        "sec-chunker",
+        "internal-chunker",
+        "vector-store"
+      ]
     },
     {
       "id": "ontology-enrichment",
@@ -72,7 +78,9 @@
       "status": "in_progress",
       "phase": "2-3",
       "location": "src/ingestion/ontology_enricher.py",
-      "dependencies": ["langchain-anthropic"]
+      "dependencies": [
+        "langchain-anthropic"
+      ]
     },
     {
       "id": "text-cleaner",
@@ -90,7 +98,9 @@
       "status": "implemented",
       "phase": 1,
       "location": "src/ingestion/types.py",
-      "dependencies": ["pydantic"]
+      "dependencies": [
+        "pydantic"
+      ]
     },
     {
       "id": "hybrid-rag",
@@ -99,7 +109,11 @@
       "status": "planned",
       "phase": "1-3",
       "location": "src/retrieval/",
-      "dependencies": ["langchain-qdrant", "qdrant-client", "fastembed"]
+      "dependencies": [
+        "langchain-qdrant",
+        "qdrant-client",
+        "fastembed"
+      ]
     },
     {
       "id": "production-rag",
@@ -108,7 +122,10 @@
       "status": "planned",
       "phase": "4-7",
       "location": "src/retrieval/",
-      "dependencies": ["langchain", "ragas"]
+      "dependencies": [
+        "langchain",
+        "ragas"
+      ]
     },
     {
       "id": "knowledge-graph",
@@ -117,7 +134,9 @@
       "status": "planned",
       "phase": "8-12",
       "location": "src/agents/",
-      "dependencies": ["neo4j"]
+      "dependencies": [
+        "neo4j"
+      ]
     },
     {
       "id": "graphrag",
@@ -126,7 +145,10 @@
       "status": "planned",
       "phase": "8-12",
       "location": "src/retrieval/",
-      "dependencies": ["langchain", "neo4j"]
+      "dependencies": [
+        "langchain",
+        "neo4j"
+      ]
     },
     {
       "id": "agentic-rag",
@@ -135,7 +157,10 @@
       "status": "planned",
       "phase": "13-18",
       "location": "src/agents/",
-      "dependencies": ["langgraph", "langchain-anthropic"]
+      "dependencies": [
+        "langgraph",
+        "langchain-anthropic"
+      ]
     },
     {
       "id": "financial-analysis-agent",
@@ -144,7 +169,22 @@
       "status": "planned",
       "phase": "13-18",
       "location": "src/agents/",
-      "dependencies": ["langgraph", "langchain-anthropic"]
+      "dependencies": [
+        "langgraph",
+        "langchain-anthropic"
+      ]
+    },
+    {
+      "id": "risk-qa-agent",
+      "name": "Risk Intelligence QA Agent",
+      "description": "LangGraph agent that answers natural language risk questions grounded in KB with cited sources. 4-node graph: route (Haiku) \u2192 retrieve \u2192 reason \u2192 generate. Dual-path retrieval (public SEC vs internal docs) with conflict detection.",
+      "status": "implemented",
+      "phase": "1-2",
+      "location": "src/agents/risk_qa_agent/",
+      "dependencies": [
+        "langgraph",
+        "langchain-anthropic"
+      ]
     },
     {
       "id": "risk-assessment-agent",
@@ -153,7 +193,10 @@
       "status": "planned",
       "phase": "13-18",
       "location": "src/agents/",
-      "dependencies": ["langgraph", "langchain-anthropic"]
+      "dependencies": [
+        "langgraph",
+        "langchain-anthropic"
+      ]
     },
     {
       "id": "earnings-comparison-agent",
@@ -162,7 +205,10 @@
       "status": "planned",
       "phase": "13-18",
       "location": "src/agents/",
-      "dependencies": ["langgraph", "langchain-anthropic"]
+      "dependencies": [
+        "langgraph",
+        "langchain-anthropic"
+      ]
     },
     {
       "id": "enterprise-governance",
@@ -180,7 +226,9 @@
       "status": "planned",
       "phase": "3+",
       "location": "streamlit_app/",
-      "dependencies": ["streamlit"]
+      "dependencies": [
+        "streamlit"
+      ]
     },
     {
       "id": "databricks-integration",
@@ -189,7 +237,9 @@
       "status": "planned",
       "phase": "19-25",
       "location": null,
-      "dependencies": ["databricks"]
+      "dependencies": [
+        "databricks"
+      ]
     }
   ],
   "statuses": {

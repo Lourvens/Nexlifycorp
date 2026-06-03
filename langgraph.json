@@ -1,7 +1,7 @@
 {
   "dependencies": [".", "langchain-anthropic>=0.3.0", "langgraph>=1.0.0"],
   "graphs": {
-    "agent": "./src/agents/retrieval_agent.py:agent"
+    "risk_qa_agent": "./src/agents/risk_qa_agent/graph.py:get_risk_qa_graph"
   },
   "env": ".env"
 }
