@@ -14,10 +14,6 @@ from src.core.config import get_config
 
 logger = logging.getLogger(__name__)
 
-# Default model (fallback if not in config)
-DEFAULT_MODEL = "MiniMax-M2.7"
-DEFAULT_FAST_MODEL = "claude-haiku-4.5"
-
 
 def create_llm(
     model: str | None = None,
@@ -43,7 +39,7 @@ def create_llm(
     settings = get_config()
 
     kwargs = {
-        "model": model or getattr(settings, 'anthropic_model', None) or DEFAULT_MODEL,
+        "model": model or getattr(settings, 'anthropic_model', None),
         "temperature": temperature,
         "api_key": api_key,
     }
@@ -82,7 +78,7 @@ def create_fast_llm(
     settings = get_config()
 
     kwargs = {
-        "model": model or getattr(settings, 'anthropic_fast_model', None) or DEFAULT_FAST_MODEL,
+        "model": model or getattr(settings, 'anthropic_fast_model', None),
         "temperature": temperature,
         "api_key": api_key,
     }

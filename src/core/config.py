@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     # Anthropic
     anthropic_base_url: str | None = None
     anthropic_model: str = "claude-sonnet-4.6"       # main LLM for generate/reason
-    anthropic_fast_model: str = "claude-haiku-4.5"   # fast classifier for route node
+    anthropic_fast_model: str = "claude-haiku-4.5"   # fast classifier for route node / ontology enricher
 
     # Ontology Enrichment (LLM-powered semantic metadata injection)
     enable_ontology: bool = False
