@@ -38,6 +38,11 @@ url = "https://download.pytorch.org/whl/cpu"
 name = "pytorch-cpu"
 default = false
 
+[tool.uv.workspace]
+members = [
+    "tests/deepresearch",
+]
+
 [tool.uv]
 # Allow all indexes for package resolution
 index-strategy = "unsafe-best-match"
