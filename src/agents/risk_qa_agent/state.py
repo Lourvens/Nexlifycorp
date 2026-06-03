@@ -1,6 +1,7 @@
 """Agent state definitions for the Risk QA Agent."""
 from typing import Annotated, TypedDict
 
+from langchain_core.messages import AnyMessage
 from langgraph.graph import add_messages
 
 
@@ -19,8 +20,12 @@ class Citation(TypedDict):
 class RiskAgentState(TypedDict):
     """State for the Risk QA Agent graph."""
 
-    messages: Annotated[list, add_messages]
-    """Conversation messages. HumanMessage at input, AIMessage at output."""
+    messages: Annotated[list[AnyMessage], add_messages]
+    """Conversation messages. HumanMessage at input, AIMessage at output.
+
+    Typed as list[AnyMessage] so LangGraph Studio detects langgraph_type=messages
+    and enables the Chat tab.
+    """
 
     route_key: Annotated[str, None]
     """
