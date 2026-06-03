@@ -3,6 +3,7 @@ import logging
 
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
 
 from src.core.llm import get_fast_llm
 from src.agents.risk_qa_agent.prompts import ROUTE_SYSTEM_PROMPT, ROUTE_USER_PROMPT
@@ -10,15 +11,16 @@ from src.agents.risk_qa_agent.prompts import ROUTE_SYSTEM_PROMPT, ROUTE_USER_PRO
 logger = logging.getLogger(__name__)
 
 
+# Combined prompt: system message + user query template
+ROUTE_PROMPT = PromptTemplate.from_template(
+    ROUTE_SYSTEM_PROMPT + "\n\n" + ROUTE_USER_PROMPT
+)
+
+
 def build_route_chain():
-    """Build the route chain: system prompt + user query → route_key."""
+    """Build the route chain: prompt template → Haiku → route_key string."""
     fast_llm = get_fast_llm()
-    return (
-        ROUTE_SYSTEM_PROMPT
-        + "\n\n"
-        + ROUTE_USER_PROMPT.format(query="{query}")
-        + "\n"
-    ) | fast_llm | StrOutputParser()
+    return ROUTE_PROMPT | fast_llm | StrOutputParser()
 
 
 def route_node(state: dict) -> dict:

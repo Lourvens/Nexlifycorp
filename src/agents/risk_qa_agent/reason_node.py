@@ -3,6 +3,7 @@ import logging
 
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableLambda
 
 from src.core.llm import get_llm
 from src.agents.risk_qa_agent.prompts import REASON_SYSTEM_PROMPT, REASON_USER_PROMPT
@@ -85,14 +86,14 @@ def reason_node(state: dict) -> dict:
 
     logger.info(f"Reason node: analyzing {len(retrieved_chunks)} chunks for query: '{query[:60]}...'")
 
-    # Build the reason chain
-    reason_prompt = REASON_SYSTEM_PROMPT + "\n\n" + REASON_USER_PROMPT.format(
+    # Build the reason chain — use direct string with .format() for variables
+    reason_prompt_str = REASON_SYSTEM_PROMPT + "\n\n" + REASON_USER_PROMPT.format(
         query=query,
         chunks_text=chunks_text
     )
 
-    fast_llm = get_llm()  # reason uses main LLM (Sonnet) for quality
-    chain = reason_prompt | fast_llm | StrOutputParser()
+    main_llm = get_llm()  # reason uses main LLM (Sonnet) for quality
+    chain = RunnableLambda(lambda _: reason_prompt_str) | main_llm | StrOutputParser()
 
     reasoning_trace = chain.invoke({}).strip()
 

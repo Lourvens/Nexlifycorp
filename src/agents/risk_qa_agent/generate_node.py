@@ -3,6 +3,7 @@ import logging
 
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableLambda
 
 from src.core.llm import get_llm
 from src.agents.risk_qa_agent.prompts import GENERATE_SYSTEM_PROMPT, GENERATE_USER_PROMPT
@@ -59,7 +60,8 @@ def generate_node(state: dict) -> dict:
     logger.info(f"Generate node: generating answer for query: '{query[:60]}...'")
     logger.info(f"  → {len(citations)} citations, reasoning trace length: {len(reasoning_trace)}")
 
-    # Build the generate chain
+    # Build prompt directly (GENERATE_SYSTEM_PROMPT contains literal footnote format
+    # with curly braces, so we build the string manually and pipe as plain str)
     generate_prompt = GENERATE_SYSTEM_PROMPT + "\n\n" + GENERATE_USER_PROMPT.format(
         query=query,
         reasoning_trace=reasoning_trace,
@@ -67,7 +69,7 @@ def generate_node(state: dict) -> dict:
     )
 
     main_llm = get_llm()
-    chain = generate_prompt | main_llm | StrOutputParser()
+    chain = RunnableLambda(lambda _: generate_prompt) | main_llm | StrOutputParser()
 
     answer = chain.invoke({}).strip()
 
