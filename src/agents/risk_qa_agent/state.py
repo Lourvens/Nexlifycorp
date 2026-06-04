@@ -33,6 +33,13 @@ class RiskAgentState(TypedDict):
     Values: "public_only" | "internal_only" | "both"
     """
 
+    needs_retrieval: Annotated[bool, None]
+    """
+    Gatekeeper decision: whether the query requires document retrieval.
+    True  → go through route → retrieve → reason → generate
+    False → skip retrieval, go directly to generate (for general/conversational queries)
+    """
+
     retrieved_chunks: Annotated[list[dict], None]
     """
     Unified list of retrieved chunks from both paths.

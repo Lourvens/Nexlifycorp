@@ -47,8 +47,10 @@ def generate_node(state: dict) -> dict:
     Returns:
         dict with updated messages (AIMessage added)
     """
-    reasoning_trace = state.get("reasoning_trace", "")
-    citations = state.get("citations", [])
+    reasoning_trace = state.get("reasoning_trace") or (
+        "No documents were retrieved for this query. The answer is based on general knowledge."
+    )
+    citations = state.get("citations") or []
     messages = state.get("messages", [])
 
     # Get user query
