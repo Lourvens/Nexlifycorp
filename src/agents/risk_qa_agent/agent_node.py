@@ -1,105 +1,170 @@
-"""Agent node — main LLM (Sonnet) as entry point and risk analyst persona.
+"""Agent node — main LLM (Sonnet) as entry point with self-retrieval capability.
 
-The agent uses full reasoning to decide:
-- conversational / identity / meta questions → respond directly and END
-- questions requiring document evidence → needs_retrieval=True, continue pipeline
+The agent has access to internal and public retriever tools. It can:
+- Use tools to ground answers about NexlifyCorp, SEC filings, etc.
+- Decide to delegate the full retrieval pipeline for complex multi-step queries
+- Respond directly for conversational queries (no tool use)
 """
 import logging
 
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda
 
 from src.core.llm import get_llm
-from src.agents.risk_qa_agent.prompts import GENERATE_SYSTEM_PROMPT
+from src.agents.tools import create_public_retriever_tool, create_private_retriever_tool
 
 logger = logging.getLogger(__name__)
 
 
-AGENT_DECISION_PROMPT = """You are a Risk Intelligence QA Agent — a senior risk analyst persona.
+AGENT_SYSTEM_PROMPT = """You are a Risk Intelligence QA Agent — a senior risk analyst.
 
-You have a full conversation history. Your job is to decide whether you can answer
-the user's latest message directly, or whether you need to search documents first.
+You have access to two search tools:
+- retrieve_public_documents: Search SEC EDGAR filings (10-K, 10-Q, 8-K) for public company info
+- retrieve_private_documents: Search internal NexlifyCorp documents (risk registers, board memos, strategy docs)
 
-## Decision
+You MUST use these tools when asked about:
+- NexlifyCorp's own documents, strategy, risk landscape, board memos
+- Specific SEC filings, company financials, competitor analysis
+- Any question that requires factual evidence from documents
 
-**Respond directly and END** when the query is:
-- Conversational: greetings, "thanks", "hello"
-- Identity questions: "who are you", "what can you do", "tell me about yourself"
-- Meta questions about how to use the system or the workflow
-- Pure chat that doesn't require document evidence
+You CAN respond directly (from general knowledge) for:
+- "Who are you", "what can you do", greetings, thanks
+- General conversation unrelated to risk intelligence
 
-**Delegate to the retrieval workflow** (set needs_retrieval=True) when the query asks:
-- About SEC filings, risk factors, financial data, competitor analysis
-- For specific facts, metrics, events, or analysis from documents
-- Anything that mentions specific companies, time periods, or requires evidence
-- Questions where document grounding would improve the answer
+## Decision Protocol
 
-## Your Persona
+After using tools (or if no tools were needed), decide:
 
-You are a sharp, evidence-driven risk analyst. You cite your sources. You are concise.
-You prefer precise, actionable insights over vague summaries. You work at NexlifyCorp,
-focused on financial risk intelligence combining SEC EDGAR filings with internal docs.
+**"DIRECT:"** — Prefix your response with DIRECT: if you can answer from tool results or general knowledge without needing the full retrieval pipeline. Examples:
+- Tool results fully answered the question
+- Conversational query that needs no documents
+- You found enough information to give a complete answer
 
-## Important
+**"DELEGATE:"** — Prefix your response with DELEGATE: if:
+- The question requires a comprehensive multi-source analysis you can't fully answer with quick tool lookups
+- The question is about detailed risk factor comparisons across many documents
+- You need the full route→retrieve→reason→generate pipeline for a thorough evidence-backed answer
 
-If you respond directly (conversational path), your response IS the final answer —
-the graph will END after your response. Do not mention the retrieval pipeline.
-If you delegate, do not answer the question yourself — just set needs_retrieval=True
-and the pipeline will produce the answer with evidence."""
+When in doubt, prefer DELEGATE — the full pipeline produces higher quality analysis."""
 
 
-def build_decision_prompt(query: str, conversation_history: str) -> str:
-    return f"{AGENT_DECISION_PROMPT}\n\n## Conversation History\n{conversation_history}\n\n## Latest User Message\n{query}\n\n## Your Decision\nAnalyze the user's message. If you can answer directly, do so. If you must delegate to the retrieval workflow, say 'DELEGATE' on a single line."""
+def _build_messages(messages: list) -> list:
+    """Build the message list for the agent, converting state messages to LangChain format."""
+    lc_messages = []
+    for m in messages:
+        if hasattr(m, "type"):
+            if m.type == "human":
+                lc_messages.append(HumanMessage(content=m.content))
+            elif m.type == "ai":
+                lc_messages.append(AIMessage(content=m.content))
+            elif m.type == "tool":
+                lc_messages.append(ToolMessage(content=m.content, tool_call_id=m.tool_call_id))
+    return lc_messages
+
+
+def _execute_tool_calls(tool_calls: list, public_tool, private_tool) -> list[ToolMessage]:
+    """Execute a list of tool calls and return ToolMessage results."""
+    results = []
+    for tc in tool_calls:
+        tool_name = tc.name
+        tool_args = tc.args
+
+        try:
+            if tool_name == "retrieve_public_documents":
+                result = public_tool.invoke(tool_args)
+            elif tool_name == "retrieve_private_documents":
+                result = private_tool.invoke(tool_args)
+            else:
+                result = f"Unknown tool: {tool_name}"
+
+            results.append(ToolMessage(content=str(result), tool_call_id=tc.id))
+            logger.info(f"  → Tool '{tool_name}' returned {len(str(result))} chars")
+        except Exception as e:
+            logger.error(f"  → Tool '{tool_name}' error: {e}")
+            results.append(ToolMessage(content=f"Error: {e}", tool_call_id=tc.id))
+
+    return results
 
 
 def agent_node(state: dict) -> dict:
     """
-    Entry point: main LLM as risk analyst decides conversational vs. retrieval path.
+    Entry point: main LLM with retriever tools decides conversational vs. retrieval path.
 
-    conversational → responds directly, graph ENDs
-    needs docs      → needs_retrieval=True, graph continues route→retrieve→reason→generate
+    Uses Sonnet with bound retriever tools. The LLM can use tools to ground answers
+    about NexlifyCorp, SEC filings, etc., then decide to respond directly or delegate.
+
+    conversational / tools answered question → responds directly, graph ENDs
+    needs full multi-source analysis              → needs_retrieval=True, continue pipeline
 
     Args:
         state: AgentState with messages
 
     Returns:
-        dict with needs_retrieval (bool) and optionally messages (AIMessage for direct path)
+        dict with needs_retrieval (bool) and messages (AIMessage)
     """
     messages = state.get("messages", [])
     if not messages:
         raise ValueError("No messages in state")
 
-    human_msgs = [m for m in messages if hasattr(m, "type") and m.type == "human"]
-    if not human_msgs:
-        raise ValueError("No HumanMessage found")
+    # Build LangChain-formatted messages
+    lc_messages = _build_messages(messages)
 
-    query = human_msgs[-1].content
+    # Create retriever tools
+    public_tool = create_public_retriever_tool()
+    private_tool = create_private_retriever_tool()
 
-    # Build conversation history (prior human messages as context)
-    history_parts = []
-    for m in messages[:-1]:
-        role = "User" if hasattr(m, "type") and m.type == "human" else "Assistant"
-        history_parts.append(f"{role}: {m.content}")
-    conversation_history = "\n".join(history_parts) if history_parts else "(no prior history)"
-
-    decision_prompt = build_decision_prompt(query, conversation_history)
-
+    # Bind tools to the main LLM
     main_llm = get_llm()
-    chain = RunnableLambda(lambda _: decision_prompt) | main_llm | StrOutputParser()
+    llm_with_tools = main_llm.bind_tools([public_tool, private_tool])
 
-    response = chain.invoke({}).strip()
+    # Add system prompt as a HumanMessage first
+    system_msg = HumanMessage(content=AGENT_SYSTEM_PROMPT)
+    full_messages = [system_msg] + lc_messages
 
-    logger.info(f"Agent node: query='{query[:60]}...' → response starts with: {response[:60]}")
+    # Invoke the LLM
+    response = llm_with_tools.invoke(full_messages)
+    logger.info(f"Agent node: initial response type={type(response).__name__}")
 
-    # Check if the LLM chose to delegate
-    if response.upper().startswith("DELEGATE"):
-        logger.info("Agent node: delegating to retrieval workflow")
-        return {"needs_retrieval": True}
+    # Tool execution loop — keep going until no more tool calls
+    while hasattr(response, "tool_calls") and response.tool_calls:
+        logger.info(f"  → Executing {len(response.tool_calls)} tool call(s)")
 
-    # Direct answer path — response IS the final answer, graph ends
-    logger.info("Agent node: direct answer, graph will END")
+        # Add the AI response (with tool calls) to the message list
+        full_messages.append(response)
+
+        # Execute all tool calls
+        tool_results = _execute_tool_calls(response.tool_calls, public_tool, private_tool)
+        full_messages.extend(tool_results)
+
+        # Re-invoke the LLM with tool results
+        response = llm_with_tools.invoke(full_messages)
+
+    # No more tool calls — get the final response text
+    final_text = ""
+    if hasattr(response, "content") and response.content:
+        final_text = "".join(
+            block.text for block in response.content if hasattr(block, "text")
+        ).strip()
+
+    logger.info(f"Agent node: final response starts with: {final_text[:80]}")
+
+    # Check for DELEGATE vs DIRECT
+    if final_text.upper().startswith("DELEGATE:"):
+        logger.info("Agent node: DELEGATE — continuing to full retrieval pipeline")
+        return {
+            "needs_retrieval": True,
+            "messages": [AIMessage(content=final_text)],
+        }
+
+    # DIRECT answer — use the text after "DIRECT:" if present
+    if final_text.upper().startswith("DIRECT:"):
+        answer = final_text[7:].strip()  # strip "DIRECT:" prefix
+    else:
+        answer = final_text  # fallback for responses without prefix
+
+    logger.info("Agent node: DIRECT answer — graph will END")
     return {
         "needs_retrieval": False,
-        "messages": [AIMessage(content=response)],
+        "messages": [AIMessage(content=answer)],
     }
