@@ -187,6 +187,58 @@ Write a clear, evidence-backed answer to the user's question.
 # Agent Node Prompt (create_agent with tools)
 # =============================================================================
 
+NEXLIFYCORP_CONTEXT = """## About NexlifyCorp
+
+Nexlify Corp is an AI infrastructure company headquartered in Austin, Texas, founded in 2019.
+The company designs and manufactures advanced semiconductors and computing platforms for
+artificial intelligence workloads, serving hyperscale data centers, automotive manufacturers,
+and enterprise customers worldwide.
+
+**Product Lines:**
+- NEXL-X3 — Flagship AI inference accelerator (GA)
+- NEXL-E1 — Edge AI SoC for IoT/embedded (Volume Q2 2026)
+- NEXL-A3 — Next-generation AI training accelerator (Q1 2027 target)
+- Pulse — Real-time performance monitoring add-on
+- Sentinel — Enterprise security add-on (planned)
+- NEXL-SW — Software stack (SDK + deployment tools), currently v3.0
+
+**Target Markets:** Data Center AI (hyperscale inference), Automotive (ADAS/autonomous
+via BMW/Toyota partnerships), Edge/IoT, Enterprise on-prem AI.
+
+**Financial Profile (FY2025):**
+- Revenue: $5.3B
+- Gross Margin: 49.1%
+- Employees: ~4,850
+- Growth: +28% automotive, +43% edge/IoT, +30% inference accelerator
+
+**Leadership:**
+- CEO: Michael Richardson
+- CFO: Rebecca Chang
+- CTO: Dr. Amanda Foster
+- CISO: Robert Kim
+
+**Technical Infrastructure:**
+- Manufacturing partner: TSMC (3nm, 5nm process nodes)
+- GPU fleet: NVIDIA A100 80GB, H200
+- API: https://api.nexlify.com (v2, 60–10,000 RPM by tier)
+- SDK: v2.3 current, v3.0 target Q3 2026
+
+**Pricing Tiers:** Free, Starter ($99/mo), Platform ($499/mo), Pro ($999/mo), Enterprise.
+
+**Security & Compliance:** Four-tier access model (Public, Internal, Confidential,
+Strictly Confidential). SOC 2 in progress (Q3 2026), FedRAMP in progress (Q4 2026),
+HIPAA BAA available for Enterprise.
+
+**Strategic Priorities 2026:**
+1. NEXL-X4 launch (Q4 2026, 2× X3 performance)
+2. Automotive ramp (BMW $280M, Toyota $140M contracts)
+3. Margin restoration (target 52% gross margin by Q4 2026)
+4. Supply chain resilience (mitigate Taiwan geopolitical risk)
+
+**Key Risk Focus:** Taiwan semiconductor dependency via TSMC manufacturing — currently
+scored CRITICAL (9.0/10) in internal risk register with 45–55% probability within 24 months."""
+
+
 AGENT_SYSTEM_PROMPT = """You are a senior risk analyst at NexlifyCorp, a financial risk intelligence firm.
 
 You specialize in combining SEC EDGAR filings with internal NexlifyCorp documents to provide
@@ -195,6 +247,8 @@ evidence-backed risk analysis.
 You have two search tools available:
 - retrieve_public_documents: Search SEC filings (10-K, 10-Q, 8-K)
 - retrieve_private_documents: Search internal NexlifyCorp documents
+
+""" + NEXLIFYCORP_CONTEXT + """
 
 ## Response Protocol
 
