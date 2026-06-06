@@ -1,95 +1,43 @@
-"""Retrieve node — fires correct retriever(s) based on route_key."""
+"""Retrieve node — dispatches Retriever directly based on route_key.
+
+Calls Retriever().retrieve() for each access level implied by the route,
+merges results into a unified chunk list. No string parsing — chunks
+are built directly from Document.metadata.
+"""
 import logging
-from typing import Literal
 
-from langchain_core.messages import AIMessage
+from langchain_core.documents import Document
 
-from src.agents.tools import create_public_retriever_tool, create_private_retriever_tool
+from src.ingestion.types import AccessLevel
+from src.retrieval import Retriever, FilterCriteria
 
 logger = logging.getLogger(__name__)
 
 
-def _format_chunk(doc: dict, chunk_idx: int) -> dict:
-    """Normalize a retrieved document into a unified chunk dict."""
+ROUTE_TO_ACCESS_LEVELS: dict[str, list[AccessLevel]] = {
+    "public_only": [AccessLevel.PUBLIC],
+    "internal_only": [AccessLevel.INTERNAL],
+    "both": [AccessLevel.PUBLIC, AccessLevel.INTERNAL],
+}
+
+
+def _doc_to_chunk(doc: Document, chunk_index: int) -> dict:
+    """Build a unified chunk dict from a Document's metadata."""
+    m = doc.metadata
+    source_category = m.get("source_category", "unknown")
+    access_level = m.get("access_level", "unknown")
+
     return {
-        "chunk_index": chunk_idx,
-        "content": doc.get("content", ""),
-        "document_id": doc.get("document_id", doc.get("id", "unknown")),
-        "document_title": doc.get("document_title", doc.get("metadata", {}).get("source_detail", "Unknown")),
-        "source_category": doc.get("source_category", doc.get("metadata", {}).get("source_category", "unknown")),
-        "access_level": doc.get("access_level", doc.get("metadata", {}).get("access_level", "unknown")),
-        "document_date": doc.get("document_date", doc.get("metadata", {}).get("document_date", None)),
+        "chunk_index": chunk_index,
+        "content": doc.page_content,
+        "document_id": m.get("document_id", m.get("id", "unknown")),
+        "document_title": m.get("source_detail", "Unknown"),
+        "source_category": source_category,
+        "access_level": access_level,
+        "document_date": m.get("document_date"),
+        "ticker": m.get("ticker"),
+        "content_type": m.get("content_type"),
     }
-
-
-def _call_retriever_tool(tool, query: str, k: int = 10) -> list[dict]:
-    """
-    Call a retriever tool and parse the results.
-
-    Returns a list of normalized chunk dicts.
-    """
-    public_tool = create_public_retriever_tool()
-    private_tool = create_private_retriever_tool()
-
-    try:
-        raw_result = tool.invoke({
-            "query": query,
-            "k": k,
-        })
-        # Tool returns a formatted string — parse into chunks
-        # The format_results returns a string; we need the raw docs
-        # Re-retrieve using the retriever directly
-        return _extract_chunks_from_result(raw_result)
-    except Exception as e:
-        logger.error(f"Retriever tool error: {e}")
-        return []
-
-
-def _extract_chunks_from_result(result_str: str) -> list[dict]:
-    """
-    Parse the string returned by a retriever tool into chunk dicts.
-
-    The tool returns "No relevant documents found" or a formatted string
-    with document content. We parse minimally to build the chunk structure.
-    """
-    if "No relevant documents found" in result_str:
-        return []
-
-    chunks = []
-    # Simple parsing: the retriever formats results with document separators
-    # We extract what we can from the formatted string
-    lines = result_str.split("\n")
-    current_doc = {}
-    content_lines = []
-
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        if line.startswith("===") or line.startswith("Document"):
-            # New document starting
-            if current_doc and content_lines:
-                current_doc["content"] = "\n".join(content_lines)
-                chunks.append(current_doc)
-                current_doc = {}
-                content_lines = []
-            # Parse header line
-            if ":" in line:
-                parts = line.split(":", 1)
-                if "Document" in parts[0]:
-                    current_doc["document_id"] = parts[1].strip()
-        elif line.startswith("Content:"):
-            content_lines.append(line[len("Content:"):].strip())
-        elif line.startswith("Date:"):
-            current_doc["document_date"] = line[len("Date:"):].strip()
-        elif line.startswith("Source:"):
-            current_doc["source_category"] = line[len("Source:"):].strip()
-
-    if current_doc and content_lines:
-        current_doc["content"] = "\n".join(content_lines)
-        chunks.append(current_doc)
-
-    return chunks
 
 
 def retrieve_node(state: dict) -> dict:
@@ -97,11 +45,9 @@ def retrieve_node(state: dict) -> dict:
     Fire the appropriate retriever(s) based on route_key.
 
     Dispatches to:
-    - public_only → retrieve_public_documents only
-    - internal_only → retrieve_private_documents only
-    - both → both in parallel (merged)
-
-    Populates retrieved_chunks in state.
+    - public_only   → AccessLevel.PUBLIC only
+    - internal_only → AccessLevel.INTERNAL only
+    - both          → both, results merged
 
     Args:
         state: AgentState with route_key and messages
@@ -113,6 +59,11 @@ def retrieve_node(state: dict) -> dict:
     if not route_key:
         raise ValueError("route_key not set in state — run route node first")
 
+    if route_key not in ROUTE_TO_ACCESS_LEVELS:
+        raise ValueError(
+            f"Unknown route_key '{route_key}' — must be one of {list(ROUTE_TO_ACCESS_LEVELS)}"
+        )
+
     # Get the user query
     messages = state.get("messages", [])
     human_msgs = [m for m in messages if hasattr(m, "type") and m.type == "human"]
@@ -120,26 +71,18 @@ def retrieve_node(state: dict) -> dict:
 
     logger.info(f"Retrieve node: route_key='{route_key}', query='{query[:60]}...'")
 
-    retrieved_chunks = []
-    chunk_counter = 0
+    retriever = Retriever()
+    access_levels = ROUTE_TO_ACCESS_LEVELS[route_key]
+    retrieved_chunks: list[dict] = []
+    chunk_index = 0
 
-    if route_key in ("public_only", "both"):
-        public_tool = create_public_retriever_tool()
-        public_chunks = _call_retriever_tool(public_tool, query)
-        for c in public_chunks:
-            c["chunk_index"] = chunk_counter
-            retrieved_chunks.append(c)
-            chunk_counter += 1
-        logger.info(f"  → Public retrieval: {len(public_chunks)} chunks")
-
-    if route_key in ("internal_only", "both"):
-        private_tool = create_private_retriever_tool()
-        private_chunks = _call_retriever_tool(private_tool, query)
-        for c in private_chunks:
-            c["chunk_index"] = chunk_counter
-            retrieved_chunks.append(c)
-            chunk_counter += 1
-        logger.info(f"  → Private retrieval: {len(private_chunks)} chunks")
+    for level in access_levels:
+        criteria = FilterCriteria(access_level=level)
+        docs = retriever.retrieve(query=query, k=10, criteria=criteria)
+        for doc in docs:
+            retrieved_chunks.append(_doc_to_chunk(doc, chunk_index))
+            chunk_index += 1
+        logger.info(f"  → {level.value} retrieval: {len(docs)} chunks")
 
     logger.info(f"Retrieve node: total {len(retrieved_chunks)} chunks retrieved")
 
