@@ -1,79 +1,59 @@
-"""Generate node — citation-aware answer generation."""
+"""Generate node — produce final cited answer from reasoning_trace + citations."""
 import logging
 
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
+from langchain_core.messages import AIMessage
 
-from src.core.llm import get_llm
 from src.agents.risk_qa_agent.prompts import GENERATE_SYSTEM_PROMPT, GENERATE_USER_PROMPT
+from src.agents.risk_qa_agent.utils import (
+    access_level_badge,
+    build_prompt,
+    last_user_query,
+    message_text,
+)
+from src.core.llm import get_llm
 
 logger = logging.getLogger(__name__)
 
 
 def _build_citations_text(citations: list[dict]) -> str:
-    """Render citations into a readable string for the generate prompt."""
+    """Render citations as a readable string for the generate prompt."""
     if not citations:
         return "No citations available."
 
     lines = []
     for c in citations:
-        badge = "[INTERNAL]" if c.get("access_level") == "INTERNAL" else "[PUBLIC]"
-        date = c.get("document_date", "unknown date")
-        excerpt = c.get("excerpt", "")[:200]
+        badge = access_level_badge(c.get("access_level", ""))
+        excerpt = (c.get("excerpt") or "")[:200]
         lines.append(
             f"[{c.get('index')}] {c.get('document_id', 'unknown')} — "
-            f"{c.get('document_title', 'Unknown')} ({date}) {badge}\n"
+            f"{c.get('document_title', 'Unknown')} "
+            f"({c.get('document_date', 'unknown date')}) {badge}\n"
             f"    Excerpt: \"{excerpt}\""
         )
     return "\n".join(lines)
 
 
 def generate_node(state: dict) -> dict:
-    """
-    Generate the final cited answer using reasoning_trace + citations.
+    """Generate the final answer and append an AIMessage to messages."""
+    reasoning_trace = state.get("reasoning_trace", "") or ""
+    citations = state.get("citations") or []
+    query = last_user_query(state)
 
-    Takes:
-    - reasoning_trace: the structured analysis from the reason node
-    - citations: structured citation metadata
-    - query: the original user question
-
-    Produces:
-    - AIMessage appended to messages with the final answer
-
-    Args:
-        state: AgentState with reasoning_trace, citations, messages
-
-    Returns:
-        dict with updated messages (AIMessage added)
-    """
-    reasoning_trace = state.get("reasoning_trace", "")
-    citations = state.get("citations", [])
-    messages = state.get("messages", [])
-
-    # Get user query
-    human_msgs = [m for m in messages if hasattr(m, "type") and m.type == "human"]
-    query = human_msgs[-1].content if human_msgs else ""
-
-    citations_text = _build_citations_text(citations)
-
-    logger.info(f"Generate node: generating answer for query: '{query[:60]}...'")
-    logger.info(f"  → {len(citations)} citations, reasoning trace length: {len(reasoning_trace)}")
-
-    # Build prompt directly (GENERATE_SYSTEM_PROMPT contains literal footnote format
-    # with curly braces, so we build the string manually and pipe as plain str)
-    generate_prompt = GENERATE_SYSTEM_PROMPT + "\n\n" + GENERATE_USER_PROMPT.format(
+    prompt = build_prompt(
+        GENERATE_SYSTEM_PROMPT,
+        GENERATE_USER_PROMPT,
         query=query,
         reasoning_trace=reasoning_trace,
-        citations_text=citations_text
+        citations_text=_build_citations_text(citations),
     )
 
-    main_llm = get_llm()
-    chain = RunnableLambda(lambda _: generate_prompt) | main_llm | StrOutputParser()
+    logger.info(
+        "Generate node: query=%r, %d citations, trace %d chars",
+        query[:60],
+        len(citations),
+        len(reasoning_trace),
+    )
 
-    answer = chain.invoke({}).strip()
-
-    logger.info(f"Generate node: answer produced ({len(answer)} chars)")
-
-    # Return updated messages with the AIMessage
+    answer = message_text(get_llm().invoke(prompt)).strip()
+    logger.info("Generate node: answer %d chars", len(answer))
     return {"messages": [AIMessage(content=answer)]}

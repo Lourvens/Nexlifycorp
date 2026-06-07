@@ -1,108 +1,80 @@
-"""Reason node — two-pass synthesis: analyze chunks + detect conflicts."""
+"""Reason node — analyze retrieved chunks and produce reasoning_trace + citations."""
 import logging
 
-from langchain_core.messages import HumanMessage
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
-
-from src.core.llm import get_llm
 from src.agents.risk_qa_agent.prompts import REASON_SYSTEM_PROMPT, REASON_USER_PROMPT
 from src.agents.risk_qa_agent.state import Citation
+from src.agents.risk_qa_agent.utils import (
+    access_level_badge,
+    build_prompt,
+    last_user_query,
+    message_text,
+    source_to_access_level,
+)
+from src.core.llm import get_llm
 
 logger = logging.getLogger(__name__)
 
 
 def _build_chunks_text(retrieved_chunks: list[dict]) -> str:
-    """Render retrieved chunks into a readable string for the reason prompt."""
-    lines = []
+    """Render retrieved chunks as a readable string for the reason prompt."""
+    blocks = []
     for i, chunk in enumerate(retrieved_chunks, 1):
-        source_type = "PUBLIC" if chunk.get("source_category") == "public_sec" else "INTERNAL"
-        lines.append(f"--- Chunk {i} [{source_type}] ---")
-        lines.append(f"Document ID: {chunk.get('document_id', 'unknown')}")
-        lines.append(f"Title: {chunk.get('document_title', 'unknown')}")
-        lines.append(f"Date: {chunk.get('document_date', 'unknown')}")
-        lines.append(f"Content:\n{chunk.get('content', '')}")
-        lines.append("")
-    return "\n".join(lines)
+        badge = access_level_badge(source_to_access_level(chunk.get("source_category", "")))
+        blocks.append(
+            f"--- Chunk {i} {badge} ---\n"
+            f"Document ID: {chunk.get('document_id', 'unknown')}\n"
+            f"Title: {chunk.get('document_title', 'unknown')}\n"
+            f"Date: {chunk.get('document_date', 'unknown')}\n"
+            f"Content:\n{chunk.get('content', '')}"
+        )
+    return "\n\n".join(blocks)
 
 
-def _parse_citations(retrieved_chunks: list[dict], reasoning_output: str) -> list[Citation]:
-    """
-    Build Citation list from retrieved chunks.
-
-    The reasoning trace already contains the analysis. Here we just build
-    structured Citation records for the generate node.
-    """
-    citations = []
+def _build_citations(retrieved_chunks: list[dict]) -> list[Citation]:
+    """Build one Citation per chunk, 1-indexed."""
+    citations: list[Citation] = []
     for i, chunk in enumerate(retrieved_chunks, 1):
         source_cat = chunk.get("source_category", "unknown")
-        access = "PUBLIC" if source_cat == "public_sec" else "INTERNAL"
-
-        citation = Citation(
-            index=i,
-            document_id=chunk.get("document_id", f"doc-{i}"),
-            document_title=chunk.get("document_title", "Unknown Document"),
-            source_category=source_cat,
-            access_level=access,
-            document_date=chunk.get("document_date"),
-            excerpt=chunk.get("content", "")[:300],  # first 300 chars as excerpt
-            chunk_content=chunk.get("content", ""),
+        citations.append(
+            Citation(
+                index=i,
+                document_id=chunk.get("document_id", f"doc-{i}"),
+                document_title=chunk.get("document_title", "Unknown Document"),
+                source_category=source_cat,
+                access_level=source_to_access_level(source_cat),
+                document_date=chunk.get("document_date"),
+                excerpt=(chunk.get("content") or "")[:300],
+                chunk_content=chunk.get("content", ""),
+            )
         )
-        citations.append(citation)
-
     return citations
 
 
 def reason_node(state: dict) -> dict:
-    """
-    Analyze retrieved chunks and produce reasoning_trace + citations.
-
-    Two-pass synthesis:
-    1. Read all chunks, identify key facts per source
-    2. Detect conflicts between internal and public sources
-    3. Build structured reasoning trace and citations
-
-    Args:
-        state: AgentState with retrieved_chunks and messages
-
-    Returns:
-        dict with reasoning_trace and citations
-    """
-    retrieved_chunks = state.get("retrieved_chunks", [])
-    messages = state.get("messages", [])
+    """Analyze retrieved chunks → reasoning_trace + citations."""
+    retrieved_chunks = state.get("retrieved_chunks") or []
 
     if not retrieved_chunks:
         logger.warning("Reason node: no chunks retrieved")
         return {
-            "reasoning_trace": "No documents were retrieved for this query. The answer cannot be grounded in evidence.",
-            "citations": []
+            "reasoning_trace": (
+                "No documents were retrieved for this query. "
+                "The answer cannot be grounded in evidence."
+            ),
+            "citations": [],
         }
 
-    # Get user query
-    human_msgs = [m for m in messages if hasattr(m, "type") and m.type == "human"]
-    query = human_msgs[-1].content if human_msgs else ""
-
-    chunks_text = _build_chunks_text(retrieved_chunks)
-
-    logger.info(f"Reason node: analyzing {len(retrieved_chunks)} chunks for query: '{query[:60]}...'")
-
-    # Build the reason chain — use direct string with .format() for variables
-    reason_prompt_str = REASON_SYSTEM_PROMPT + "\n\n" + REASON_USER_PROMPT.format(
+    query = last_user_query(state)
+    prompt = build_prompt(
+        REASON_SYSTEM_PROMPT,
+        REASON_USER_PROMPT,
         query=query,
-        chunks_text=chunks_text
+        chunks_text=_build_chunks_text(retrieved_chunks),
     )
+    logger.info("Reason node: analyzing %d chunks for query=%r", len(retrieved_chunks), query[:60])
 
-    main_llm = get_llm()  # reason uses main LLM (Sonnet) for quality
-    chain = RunnableLambda(lambda _: reason_prompt_str) | main_llm | StrOutputParser()
+    reasoning_trace = message_text(get_llm().invoke(prompt)).strip()
+    citations = _build_citations(retrieved_chunks)
 
-    reasoning_trace = chain.invoke({}).strip()
-
-    # Build citations from chunks
-    citations = _parse_citations(retrieved_chunks, reasoning_trace)
-
-    logger.info(f"Reason node: reasoning trace produced {len(citations)} citations")
-
-    return {
-        "reasoning_trace": reasoning_trace,
-        "citations": citations
-    }
+    logger.info("Reason node: trace produced %d citations", len(citations))
+    return {"reasoning_trace": reasoning_trace, "citations": citations}
