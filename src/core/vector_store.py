@@ -33,8 +33,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-    Distance, VectorParams, Filter, FieldCondition, 
-    MatchValue, PayloadSchemaType
+    Distance, VectorParams, Filter, FieldCondition,
+    MatchValue, MatchAny, PayloadSchemaType
 )
 from langchain_qdrant import QdrantVectorStore
 from src.utils.logger import logger
@@ -122,8 +122,18 @@ def convert_filter_dict_to_qdrant(
         if isinstance(value, dict):
             # Range filter: {'fiscal_year': {'gte': 2020}}
             conditions.append(FieldCondition(key=full_key, range=value))
+        elif isinstance(value, list):
+            # Multi-value filter: {'ticker': ['NVDA', 'AMD']} → match any
+            if not value:
+                continue
+            if all(isinstance(v, str) for v in value):
+                conditions.append(FieldCondition(key=full_key, match=MatchAny(any=value)))
+            else:
+                # Mixed-type list: fall back to matching each element individually
+                for v in value:
+                    conditions.append(FieldCondition(key=full_key, match=MatchValue(value=v)))
         else:
-            # Exact match
+            # Exact match (scalar)
             conditions.append(FieldCondition(
                 key=full_key,
                 match=MatchValue(value=value)

@@ -17,10 +17,19 @@ def message_text(message: BaseMessage) -> str:
     return message.text
 
 
+def _is_human_message(message: BaseMessage) -> bool:
+    """True for HumanMessage or API-serialized user/human roles."""
+    msg_type = getattr(message, "type", None)
+    if msg_type == "human":
+        return True
+    role = getattr(message, "role", None)
+    return role in ("human", "user")
+
+
 def last_user_query(state: dict) -> str:
     """Get the most recent human message text from state, or "" if none."""
     for m in reversed(state.get("messages") or []):
-        if getattr(m, "type", None) == "human":
+        if _is_human_message(m):
             return message_text(m)
     return ""
 

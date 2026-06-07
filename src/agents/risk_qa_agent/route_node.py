@@ -48,5 +48,14 @@ def route_node(state: dict) -> dict:
         ]
     )
 
-    logger.info("Route node: query=%r → route_key=%r", query[:80], decision.route_key)
-    return {"route_key": decision.route_key}
+    route_key: RouteKey = "both"
+    if decision is not None and getattr(decision, "route_key", None):
+        route_key = decision.route_key
+    else:
+        logger.warning(
+            "Route node: structured output returned no route_key for query=%r — defaulting to both",
+            query[:80],
+        )
+
+    logger.info("Route node: query=%r → route_key=%r", query[:80], route_key)
+    return {"route_key": route_key}
