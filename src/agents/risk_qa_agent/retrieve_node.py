@@ -21,22 +21,33 @@ ROUTE_TO_ACCESS_LEVELS: dict[str, list[AccessLevel]] = {
 }
 
 
-def _doc_to_chunk(doc: Document, chunk_index: int) -> dict:
-    """Build a unified chunk dict from a Document's metadata."""
-    m = doc.metadata
-    source_category = m.get("source_category", "unknown")
-    access_level = m.get("access_level", "unknown")
+def _safe_str(value, default: str = "unknown") -> str:
+    """Coerce a metadata value to a string, handling lists from multi-value fields."""
+    if value is None:
+        return default
+    if isinstance(value, list):
+        # Multi-value fields (e.g., ticker for multi-ticker docs) — join as comma-separated
+        return ", ".join(str(v) for v in value) if value else default
+    return str(value)
 
+
+def _doc_to_chunk(doc: Document, chunk_index: int) -> dict:
+    """Build a unified chunk dict from a Document's metadata.
+
+    All fields are coerced to str to avoid downstream .replace() / .format() errors
+    when Qdrant returns multi-value fields (ticker, content_type) as lists.
+    """
+    m = doc.metadata
     return {
         "chunk_index": chunk_index,
-        "content": doc.page_content,
-        "document_id": m.get("document_id", m.get("id", "unknown")),
-        "document_title": m.get("source_detail", "Unknown"),
-        "source_category": source_category,
-        "access_level": access_level,
-        "document_date": m.get("document_date"),
-        "ticker": m.get("ticker"),
-        "content_type": m.get("content_type"),
+        "content": str(doc.page_content) if doc.page_content else "",
+        "document_id": _safe_str(m.get("document_id") or m.get("id")),
+        "document_title": _safe_str(m.get("source_detail"), default="Unknown"),
+        "source_category": _safe_str(m.get("source_category")),
+        "access_level": _safe_str(m.get("access_level")),
+        "document_date": _safe_str(m.get("document_date"), default="") or None,
+        "ticker": _safe_str(m.get("ticker"), default="") or None,
+        "content_type": _safe_str(m.get("content_type"), default="") or None,
     }
 
 
