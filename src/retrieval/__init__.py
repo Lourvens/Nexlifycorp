@@ -34,6 +34,7 @@ class FilterCriteria:
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
         is_public: Optional[bool] = None,
+        sec_form: Optional[str] = None,
     ):
         self.access_level = access_level
         self.content_types = content_types
@@ -42,6 +43,7 @@ class FilterCriteria:
         self.date_from = date_from
         self.date_to = date_to
         self.is_public = is_public
+        self.sec_form = sec_form
 
     def to_dict(self) -> dict:
         """Convert to dict for VectorStore.search()."""
@@ -68,6 +70,9 @@ class FilterCriteria:
 
         if self.date_to is not None:
             result["document_date_to"] = self.date_to.isoformat()
+
+        if self.sec_form is not None:
+            result["sec_form"] = self.sec_form
 
         return result
 
